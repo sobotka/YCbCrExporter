@@ -15,11 +15,13 @@ TEMPLATE = app
 SOURCES += main.cpp\
         mainwindow.cpp \
     dslrlabview.cpp \
-    ffsequence.cpp
+    ffsequence.cpp \
+    textpill.cpp
 
 HEADERS  += mainwindow.h \
     dslrlabview.h \
-    ffsequence.h
+    ffsequence.h \
+    textpill.h
 
 FORMS    += mainwindow.ui
 

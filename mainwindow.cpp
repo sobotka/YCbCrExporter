@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QtCore>
 
 //***********************
 // * CustomApplication
@@ -59,23 +60,55 @@ MainWindow::MainWindow(QWidget *parent) :
                     QApplication::desktop()->availableGeometry()));
 
     // Provide an empty anchoring widget to anchor the QVBoxLayout.
-    m_pAnchorWidget = new QWidget;
-    setCentralWidget(m_pAnchorWidget);
+    m_pMainAnchorWidget = new QWidget;
+    m_pSidebarAnchorWidget = new QWidget;
 
+    m_pPlaceholderLabel = new QLabel(tr("Placeholder!!!"));
+
+    setCentralWidget(m_pMainAnchorWidget);
+
+    // Main top to bottom layout.
     m_pVBoxLayout = new QVBoxLayout;
     centralWidget()->setLayout(m_pVBoxLayout);
 
+    // Sidebar top to bottom layout.
+    m_pSidebarLayout = new QVBoxLayout;
+    m_pPlainTextEdit = new QPlainTextEdit;
+
+    QPalette tempPal = m_pPlainTextEdit->palette();
+    tempPal.setColor(QPalette::Base, tempPal.color(QPalette::Dark));
+    m_pPlainTextEdit->setPalette(tempPal);
+    m_pPlainTextEdit->setReadOnly(true);
+    //m_pPlainTextEdit->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+
+    m_pSidebarAnchorWidget->setLayout(m_pSidebarLayout);
+    m_pSidebarLayout->addWidget(m_pPlaceholderLabel);
+    m_pSidebarLayout->setMargin(DSLRLAB_NOMARGIN);
+    m_pSidebarLayout->addWidget(m_pPlainTextEdit);
+
+    m_pVSplitter = new QSplitter(Qt::Horizontal);
     m_pDSLRLabView = new DSLRLabView;
-    //m_pDSLRLabView->show();
+
+    m_pVSplitter->addWidget(m_pSidebarAnchorWidget);
+    m_pVSplitter->addWidget(m_pDSLRLabView);
+
+    //Establish the scaling ratios initially.
+    m_pVSplitter->setStretchFactor(m_pVSplitter->indexOf(m_pSidebarAnchorWidget),
+                                   DSLRLAB_SIDEBAR_RATIO);
+    m_pVSplitter->setStretchFactor(m_pVSplitter->indexOf(m_pDSLRLabView),
+                                   DSLRLAB_PRIMARYVIEW_RATIO);
+
     m_pSlider = new QSlider(Qt::Horizontal);
 
-    m_pVBoxLayout->addWidget(m_pDSLRLabView);
+    m_pVBoxLayout->addWidget(m_pVSplitter);
     m_pVBoxLayout->addWidget(m_pSlider);
+
 
     createActions();
     createMenus();
 
     updateUI(m_pDSLRLabView->isValidSequence());
+    LOG_MSG("Logging started...");
 }
 
 MainWindow::~MainWindow()
@@ -94,38 +127,7 @@ void MainWindow::openFile(void)
                                 &selectedFilter,
                                 options);
 
-    try
-    {
-        if (fileName.isNull())
-            throw ffError("fileName.isNull()", FFERROR_BAD_FILENAME);
-        m_pDSLRLabView->openFile(fileName.toUtf8().data());
-
-    }
-    catch (ffError eff)
-    {
-        // To simplify our code above this call so that we can avoid many if
-        // else situations, simply rethrow the exception and take no
-        // extraordinary action when the filename is NULL, indicating a cancel.
-        if (eff.getError() == FFERROR_BAD_FILENAME)
-            throw;
-        else
-        {
-            QMessageBox msgBox(this);
-
-            QString errorMessage =
-                    tr("There was an error loading the video file specified. "
-                       "Please confirm that the file type is supported. "
-                       "Error: (") + QString(eff.what()) + ")";
-            msgBox.setText(tr("Error loading file"));
-            msgBox.setInformativeText(errorMessage);
-            msgBox.setStandardButtons(QMessageBox::Close);
-            msgBox.setIcon(QMessageBox::Critical);
-            msgBox.setWindowModality(Qt::WindowModal);
-
-            msgBox.exec();
-        }
-    }
-    updateUI(m_pDSLRLabView->isValidSequence());
+    QFuture<void> future = QtConcurrent::run(this, &MainWindow::actionOpenFile, fileName);
 }
 
 void MainWindow::updateUI(bool isValid)
@@ -152,6 +154,12 @@ void MainWindow::updateUI(bool isValid)
 
 void MainWindow::createActions(void)
 {
+    DSLRLabView::connect(m_pDSLRLabView, SIGNAL(signal_frameChanged(long)),
+                         this, SLOT(actionFrameChange(long)));
+
+    DSLRLabView::connect(m_pDSLRLabView, SIGNAL(signal_sequenceNew()),
+                         this, SLOT(actionSequenceNew()));
+
     // File Menu Actions
     m_pActionFileOpen = new QAction(tr("&Open"), this);
     m_pActionFileOpen->setShortcut(tr("Ctrl+o"));
@@ -185,7 +193,6 @@ void MainWindow::createActions(void)
             SLOT(actionMenuViewZoom4x()));
 
     // Frame Change Actions
-    //m_pActionFrameChange = new QAction(tr("Frame Change"), this);
     connect(m_pSlider, SIGNAL(valueChanged(int)), this,
             SLOT(actionFrameChange(int)));
 }
@@ -257,8 +264,58 @@ void MainWindow::actionMenuViewZoom4x()
         m_pDSLRLabView->setScale(4.0, m_pDSLRLabView->getCenter().toPoint());
 }
 
-void MainWindow::actionFrameChange(int value)
+// Signals and slots must match 1:1 with variable declarations. Frames
+// are long by default, so we must create an additional function for
+// the int passed from the slider.
+void MainWindow::actionFrameChange(int frame)
 {
     if (m_pDSLRLabView->isValidSequence())
-        m_pDSLRLabView->setCurrentFrame(value);
+        m_pDSLRLabView->updateCurrentFrame(frame);
+}
+
+void MainWindow::actionFrameChange(long frame)
+{
+    if (m_pDSLRLabView->isValidSequence())
+        m_pDSLRLabView->updateCurrentFrame(frame);
+}
+
+void MainWindow::actionSequenceNew()
+{
+    m_pDSLRLabView->sequenceNew();
+    updateUI(m_pDSLRLabView->isValidSequence());
+}
+
+void MainWindow::actionOpenFile(QString fileName)
+{
+    try
+    {
+        if (fileName.isNull())
+            throw ffError("fileName.isNull()", FFERROR_BAD_FILENAME);
+        m_pDSLRLabView->openFile(fileName.toUtf8().data());
+
+    }
+    catch (ffError eff)
+    {
+        // To simplify our code above this call so that we can avoid many if
+        // else situations, simply rethrow the exception and take no
+        // extraordinary action when the filename is NULL, indicating a cancel.
+        if (eff.getError() == FFERROR_BAD_FILENAME)
+            throw;
+        else
+        {
+            QMessageBox msgBox(this);
+
+            QString errorMessage =
+                    tr("There was an error loading the video file specified. "
+                       "Please confirm that the file type is supported. "
+                       "Error: (") + QString(eff.what()) + ")";
+            msgBox.setText(tr("Error loading file"));
+            msgBox.setInformativeText(errorMessage);
+            msgBox.setStandardButtons(QMessageBox::Close);
+            msgBox.setIcon(QMessageBox::Critical);
+            msgBox.setWindowModality(Qt::WindowModal);
+
+            msgBox.exec();
+        }
+    }
 }

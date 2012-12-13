@@ -33,6 +33,15 @@ extern "C"
 #define FFERROR_ALLOC_ERROR                                 103
 #define FFERROR_BAD_FILENAME                                104
 
+class ffInterpolator
+{
+public:
+    enum Type
+    {
+        Nearest, Linear, Cubic, Prefilter
+    };
+};
+
 class ffAVPacket : public AVPacket
 {
 public:
@@ -64,17 +73,45 @@ public:
     long                                    m_height;
 };
 
+class ffSizeRatio
+{
+public:
+    ffSizeRatio(ffSize, ffSize);
+    float                                   m_widthRatio;
+    float                                   m_heightRatio;
+};
+
 class ffRawFrame
 {
 private:
 
 public:
+    enum PlaneType
+    {
+        Y, Cb, Cr
+    };
+
     unsigned char                  *m_pY;
     unsigned char                  *m_pCb;
     unsigned char                  *m_pCr;
 
     ffRawFrame(AVFrame*);
     ~ffRawFrame();
+
+    void scalePlane(ffRawFrame::PlaneType, ffSize, ffSizeRatio,
+                    ffInterpolator::Type);
+};
+
+class ffRawFrameFloat
+{
+private:
+public:
+    float                          *m_pfY;
+    float                          *m_pfCb;
+    float                          *m_pfCr;
+
+    ffRawFrameFloat(long);
+    ~ffRawFrameFloat();
 };
 
 class ffSequence
@@ -88,9 +125,11 @@ private:
     long                                    m_currentFrame;
     ffSize                                  m_lumaSize;
     ffSize                                  m_chromaSize;
+    ffSize                                  m_scaledSize;
     int                                     m_stream;
     static bool                             m_isInitialized;
     std::vector<ffRawFrame*>                m_frames;
+    std::vector<ffRawFrameFloat*>           m_framesFloat;
     bool                                    m_isValid;
 
     void initialize(void);
@@ -109,18 +148,5 @@ public:
     ffSize getLumaSize(void);
     ffSize getChromaSize(void);
     bool isValid(void);
-    void scalePlane(void);
-};
-
-class ffRawFrameFloatScaled
-{
-private:
-public:
-    float                          *m_pfY;
-    float                          *m_pfCb;
-    float                          *m_pfCr;
-
-    ffRawFrameFloatScaled(ffRawFrame*, ffSequence*);
-    ~ffRawFrameFloatScaled();
 };
 #endif // FFSEQUENCE_H

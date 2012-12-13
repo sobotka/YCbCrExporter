@@ -7,12 +7,27 @@
 #include <QApplication>
 #include <QMainWindow>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
 #include <QSlider>
+#include <QSplitter>
 #include <QAction>
 #include <QMenu>
+#include <QPlainTextEdit>
 
 #define DSLRLAB_DEFAULT_WIDTH               1000
 #define DSLRLAB_DEFAULT_HEIGHT              562
+#define DSLRLAB_SIDEBAR_RATIO               0
+#define DSLRLAB_PRIMARYVIEW_RATIO           5
+#define DSLRLAB_NOMARGIN                    0
+
+#define LOGGING_ON                          true
+
+#ifdef LOGGING_ON
+#define LOG_MSG(...) m_pPlainTextEdit->appendPlainText(__VA_ARGS__)
+#else
+#define LOG_MSG(...)
+#endif
 
 namespace Ui {
 class MainWindow;
@@ -45,13 +60,26 @@ private slots:
     void actionMenuViewZoom4x();
 
     void actionFrameChange(int);
+    void actionFrameChange(long);
+
+    void actionSequenceNew(void);
+
+    void actionOpenFile(QString);
 
 private:
-    // Widgets
-    QWidget                                *m_pAnchorWidget;
+    // Layouts
     QVBoxLayout                            *m_pVBoxLayout;
+    QVBoxLayout                            *m_pSidebarLayout;
+    // Widgets
+    QWidget                                *m_pMainAnchorWidget;
+    QWidget                                *m_pUpperAnchorWidget;
+    QWidget                                *m_pSidebarAnchorWidget;
+    QLabel                                 *m_pPlaceholderLabel;
+    QPlainTextEdit                         *m_pPlainTextEdit;
     DSLRLabView                            *m_pDSLRLabView;
     QSlider                                *m_pSlider;
+    QSplitter                              *m_pVSplitter;
+
     // Actions
     //QAction            *m_pFileOpenAction;
     QAction                                *m_pActionFileOpen;

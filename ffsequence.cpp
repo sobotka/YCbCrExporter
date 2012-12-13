@@ -1,5 +1,13 @@
 #include "ffsequence.h"
 #include <stdexcept>
+#include <math.h>
+
+ffSizeRatio::ffSizeRatio(ffSize src, ffSize dst) :
+    m_widthRatio(0), m_heightRatio(0)
+{
+    m_widthRatio = (float)src.m_width / (float)dst.m_width;
+    m_heightRatio = (float)src.m_height / dst.m_height;
+}
 
 //***********************
 // * ffRawFrame
@@ -57,16 +65,40 @@ ffRawFrame::~ffRawFrame()
     delete[] m_pCr;
 }
 
-ffRawFrameFloatScaled::ffRawFrameFloatScaled(ffRawFrame *pffRawFrame,
-                                       ffSequence *pffSequence) :
+// The following will take a given plane and scale it to the given
+// dimensions using the given interpolator. For any given ffSequence,
+// only one scaled float version will exist.
+void ffRawFrame::scalePlane(ffRawFrame::PlaneType plane, ffSize dst,
+                            ffSizeRatio ratio, ffInterpolator::Type interp)
+{
+    switch (interp)
+    {
+        case ffInterpolator::Nearest:
+            break;
+        case ffInterpolator::Linear:
+            break;
+        case ffInterpolator::Cubic:
+            break;
+        case ffInterpolator::Prefilter:
+            break;
+    }
+}
+
+//***********************
+// * ffRawFrameFloat
+// **********************
+
+ffRawFrameFloat::ffRawFrameFloat(long len) :
     m_pfY(NULL),
     m_pfCb(NULL),
     m_pfCr(NULL)
 {
-
+    m_pfY = new float[len];
+    m_pfCb = new float[len];
+    m_pfCr = new float[len];
 }
 
-ffRawFrameFloatScaled::~ffRawFrameFloatScaled()
+ffRawFrameFloat::~ffRawFrameFloat()
 {
     delete[] m_pfY;
     delete[] m_pfCb;
@@ -81,7 +113,7 @@ bool ffSequence::m_isInitialized;
 ffSequence::ffSequence(void):
     m_pFormatCtx(NULL), m_pCodecCtx(NULL), m_pCodec(NULL),
     m_totalFrames(FF_NO_FRAME), m_currentFrame(FF_NO_FRAME), m_lumaSize(0,0),
-    m_chromaSize(0,0), m_stream(FF_NO_STREAM), m_isValid(false)
+    m_chromaSize(0,0), m_scaledSize(0,0), m_stream(FF_NO_STREAM), m_isValid(false)
 {
     if (!m_isInitialized)
         initialize();
@@ -281,9 +313,4 @@ ffSize ffSequence::getChromaSize(void)
 bool ffSequence::isValid(void)
 {
     return m_isValid;
-}
-
-void ffSequence::scalePlane()
-{
-
 }

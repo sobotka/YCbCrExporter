@@ -12,51 +12,47 @@
 
 DSLRLabView::DSLRLabView(QWidget *parent) :
     QGraphicsView(parent), m_pGraphicsScene(NULL), m_pGraphicsPixmapItem(NULL),
-    m_pffSequence(NULL)
+    m_pffSequence(NULL), m_pTextPill(NULL), m_pFadeUp(NULL), m_pTextFade(NULL),
+    m_pFadeUpAnimation(NULL), m_pTextAnimation(NULL)
 {
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform);
-
-    //Set-up the scene
-
-    //Scene->addPixmap(QPixmap("/home/aphorism/Pictures/Screenshot from 2012-11-19 10:05:44.png"));
-
-    //Populate the scene
-    //for(int x = 0; x < 1000; x = x + 25) {
-    //    for(int y = 0; y < 1000; y = y + 25) {
-
-    //        if(x % 100 == 0 && y % 100 == 0) {
-    //            Scene->addRect(x, y, 2, 2);
-
-    //            QString pointString;
-    //            QTextStream stream(&pointString);
-    //            stream << "(" << x << "," << y << ")";
-    //            QGraphicsTextItem* item = Scene->addText(pointString);
-    //            item->setPos(x, y);
-    //       } else {
-    //            Scene->addRect(x, y, 1, 1);
-    //        }
-    //    }
-    //}
-
-    //Set-up the view
-    //
-    //setCenter(QPointF(2560.0/2.0, 1440.0/2)); //A modified version of centerOn(), handles special cases
-    //setCursor(Qt::OpenHandCursor);
+    setBackgroundRole(QPalette::Dark);
 
     m_pGraphicsScene = new QGraphicsScene(this);
     setScene(m_pGraphicsScene);
-    //setSceneRect(0, 0, 2560, 1440);
 
-    setBackgroundRole(QPalette::Dark);
+    m_pGraphicsViewOverlay = new QGraphicsView(this);
+    m_pGraphicsViewOverlay->setStyleSheet("background:transparent; border:none; margin: 10px;");
+    m_pGraphicsSceneOverlay = new QGraphicsScene(this);
+
+    m_pGraphicsViewOverlay->setScene(m_pGraphicsSceneOverlay);
+
+    m_pTextPill = new TextPill;
+    m_pGraphicsSceneOverlay->addItem(m_pTextPill);
+
+    m_pTextPill->setText("This is a really, really, really, long, long, long, long, long item.");
 
     m_pGraphicsPixmapItem = new QGraphicsPixmapItem;
+
+    m_pFadeUp = new QGraphicsOpacityEffect;
+    m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadeUp);
+
+    m_pFadeUpAnimation = new QPropertyAnimation(m_pFadeUp, "opacity");
+    m_pFadeUpAnimation->setDuration(1000);
+    m_pFadeUpAnimation->setStartValue(0);
+    m_pFadeUpAnimation->setEndValue(1);
+
     m_pGraphicsScene->addItem(m_pGraphicsPixmapItem);
+
     m_pffSequence = new ffSequence;
 }
 
 DSLRLabView::~DSLRLabView()
 {
     delete m_pffSequence;
+    delete m_pTextPill;
+    delete m_pGraphicsViewOverlay;
+    delete m_pGraphicsSceneOverlay;
     delete m_pGraphicsPixmapItem;
     delete m_pGraphicsScene;
 }
@@ -85,7 +81,7 @@ void DSLRLabView::setScale(float scaleFactor, QPoint scaleCenterPos)
   * the centerPoint must be within the sceneRec.
   */
 //Set the current centerpoint in the
-void DSLRLabView::setCenter(const QPointF& centerPoint)
+void DSLRLabView::setCenter(const QPointF& centrePoint)
 {
     //Get the rectangle of the visible area in scene coords
     QRectF visibleArea = mapToScene(rect()).boundingRect();
@@ -101,50 +97,70 @@ void DSLRLabView::setCenter(const QPointF& centerPoint)
     //The max boundary that the centerPoint can be to
     QRectF bounds(boundX, boundY, boundWidth, boundHeight);
 
-    if(bounds.contains(centerPoint))
+    if(bounds.contains(centrePoint))
         //We are within the bounds
-        CurrentCenterPoint = centerPoint;
+        m_currentCentrePointF = centrePoint;
     else
     {
         //We need to clamp or use the center of the screen
         if(visibleArea.contains(sceneBounds))
             //Use the center of scene ie. we can see the whole scene
-            CurrentCenterPoint = sceneBounds.center();
+            m_currentCentrePointF = sceneBounds.center();
         else
         {
-            CurrentCenterPoint = centerPoint;
+            m_currentCentrePointF = centrePoint;
 
             //We need to clamp the center. The centerPoint is too large
-            if(centerPoint.x() > bounds.x() + bounds.width())
-                CurrentCenterPoint.setX(bounds.x() + bounds.width());
-            else if(centerPoint.x() < bounds.x())
-                CurrentCenterPoint.setX(bounds.x());
+            if(centrePoint.x() > bounds.x() + bounds.width())
+                m_currentCentrePointF.setX(bounds.x() + bounds.width());
+            else if(centrePoint.x() < bounds.x())
+                m_currentCentrePointF.setX(bounds.x());
 
-            if(centerPoint.y() > bounds.y() + bounds.height())
-                CurrentCenterPoint.setY(bounds.y() + bounds.height());
-            else if(centerPoint.y() < bounds.y())
-                CurrentCenterPoint.setY(bounds.y());
+            if(centrePoint.y() > bounds.y() + bounds.height())
+                m_currentCentrePointF.setY(bounds.y() + bounds.height());
+            else if(centrePoint.y() < bounds.y())
+                m_currentCentrePointF.setY(bounds.y());
         }
     }
 
     //Update the scrollbars
-    centerOn(CurrentCenterPoint);
+    centerOn(m_currentCentrePointF);
 }
 
-void DSLRLabView::setCurrentFrame(long frame)
+void DSLRLabView::updateCurrentFrame(long frame)
 {
     ffRawFrame *pRawFrame = m_pffSequence->getRawFrame(frame);
 
     QImage *pImage = new QImage(pRawFrame->m_pY,
-                          m_pffSequence->getLumaSize().m_width,
-                          m_pffSequence->getLumaSize().m_height,
-                          QImage::Format_Indexed8);
+                                      m_pffSequence->getLumaSize().m_width,
+                                      m_pffSequence->getLumaSize().m_height,
+                                      QImage::Format_Indexed8);
 
-    //QPixmap *pPixmap = new QPixmap(QPixmap::fromImage(*pImage));
     m_pGraphicsPixmapItem->setPixmap(QPixmap::fromImage(*pImage));
-
-    //delete pPixmap;
     delete pImage;
+}
+
+void DSLRLabView::fadeUp()
+{
+    /*if (m_pFadeUp)
+    {
+        delete m_pFadeUp;
+        m_pFadeUp = NULL;
+    }
+    if (m_pFadeUpAnimation)
+    {
+        delete m_pFadeUpAnimation;
+        m_pFadeUpAnimation = NULL;
+    }
+    m_pFadeUp = new QGraphicsOpacityEffect;
+    m_pFadeUp->setOpacity(0);
+    m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadeUp);
+
+    m_pFadeUpAnimation = new QPropertyAnimation(m_pFadeUp, "opacity");
+    m_pFadeUpAnimation->setDuration(1000);
+    m_pFadeUpAnimation->setStartValue(0);
+    m_pFadeUpAnimation->setEndValue(1);
+    m_pFadeUpAnimation->start();*/
 }
 
 void DSLRLabView::fitToView()
@@ -157,18 +173,28 @@ void DSLRLabView::openFile(char *fileName)
     try
     {
         m_pffSequence->openFile(fileName);
-        setCurrentFrame(m_pffSequence->getCurrentFrame());
+        //setCurrentFrame(m_pffSequence->getCurrentFrame());
         setSceneRect(0, 0,
                      m_pffSequence->getLumaSize().m_width,
                      m_pffSequence->getLumaSize().m_height);
+        emit signal_sequenceNew();
+        //emit signal_frameChanged(m_pffSequence->getCurrentFrame());
         //setCenter(QPointF(0, 0));
-        fitToView();
+        //fitToView();
     }
     catch (ffError eff)
     {
         throw;
     }
 
+}
+
+void DSLRLabView::sequenceNew(void)
+{
+    updateCurrentFrame(m_pffSequence->getCurrentFrame());
+    fitToView();
+    m_pGraphicsPixmapItem->show();
+    m_pFadeUpAnimation->start();
 }
 
 long DSLRLabView::getTotalFrames(void)
@@ -189,7 +215,7 @@ void DSLRLabView::mousePressEvent(QMouseEvent* event)
     // Click drag on middle mouse button
     if (event->button() == Qt::MiddleButton)
     {
-        LastPanPoint = event->pos();
+        m_lastPanPointF = event->pos();
         setCursor(Qt::ClosedHandCursor);
     }
 }
@@ -202,7 +228,7 @@ void DSLRLabView::mouseReleaseEvent(QMouseEvent* event)
     if (event->button() == Qt::MiddleButton)
     {
         setCursor(Qt::ArrowCursor);
-        LastPanPoint = QPoint();
+        m_lastPanPointF = QPoint();
     }
 }
 
@@ -211,11 +237,11 @@ void DSLRLabView::mouseReleaseEvent(QMouseEvent* event)
 */
 void DSLRLabView::mouseMoveEvent(QMouseEvent* event)
 {
-    if(!LastPanPoint.isNull())
+    if(!m_lastPanPointF.isNull())
     {
         //Get how much we panned
-        QPointF delta = mapToScene(LastPanPoint) - mapToScene(event->pos());
-        LastPanPoint = event->pos();
+        QPointF delta = mapToScene(m_lastPanPointF) - mapToScene(event->pos());
+        m_lastPanPointF = event->pos();
 
         //Update the center ie. do the pan
         setCenter(getCenter() + delta);

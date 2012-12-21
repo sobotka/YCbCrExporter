@@ -132,6 +132,8 @@ private:
     std::vector<ffRawFrameFloat*>           m_framesFloat;
     bool                                    m_isValid;
 
+    std::string                             fileURI;
+
     void initialize(void);
     void pushRawFrame(AVFrame*);
     void freeRawFrames(void);
@@ -148,5 +150,6 @@ public:
     ffSize getLumaSize(void);
     ffSize getChromaSize(void);
     bool isValid(void);
+    std::string getFilename(void);
 };
 #endif // FFSEQUENCE_H

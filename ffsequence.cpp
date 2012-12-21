@@ -266,6 +266,7 @@ void ffSequence::openFile(char *filename)
 
         // Only if we make it this far is the ffSequence object valid.
         m_isValid = true;
+        fileURI = filename;
         setCurrentFrame(FF_FIRST_FRAME);
     }
     catch(ffError ffErr)
@@ -313,4 +314,9 @@ ffSize ffSequence::getChromaSize(void)
 bool ffSequence::isValid(void)
 {
     return m_isValid;
+}
+
+std::string ffSequence::getFilename(void)
+{
+    return fileURI;
 }

@@ -1,31 +1,65 @@
 #include "textpill.h"
 #include <QPainter>
 #include <QApplication>
+#include <QGraphicsScene>
 
-TextPill::TextPill(void) :
+#include <stdio.h>
+
+QTextPill::QTextPill(void) :
     m_colorFill(DEFAULT_FILLCOLOR), m_colorText(DEFAULT_TEXTCOLOR), m_text(""),
     m_pEffect(NULL), m_pPropertyAnimation(NULL)
 {
+    createObjects();
+    initObjects();
 }
 
-TextPill::~TextPill()
+QTextPill::~QTextPill()
 {
-    delete m_pEffect;
-    m_pEffect = NULL;
     delete m_pPropertyAnimation;
-    m_pPropertyAnimation = NULL;
+    delete m_pEffect;
 }
 
-void TextPill::paint(QPainter *pPainter,
-                 const QStyleOptionGraphicsItem *,
+void QTextPill::createObjects(void)
+{
+    m_pEffect = new QGraphicsOpacityEffect;
+    m_pPropertyAnimation = new QPropertyAnimation(m_pEffect, "opacity");
+    setGraphicsEffect(m_pEffect);
+}
+
+void QTextPill::initObjects(void)
+{
+    init();
+}
+
+void QTextPill::init(QString text, int dur, qreal start, qreal end)
+{
+    setOpacity(DEFAULT_ENDVALUE);
+    setText(text);
+    m_pPropertyAnimation->setDuration(dur);
+    m_pPropertyAnimation->setStartValue(start);
+    m_pPropertyAnimation->setEndValue(end);
+    m_pPropertyAnimation->setEasingCurve(QEasingCurve::InQuint);
+}
+
+void QTextPill::start()
+{
+    m_pPropertyAnimation->stop();
+    setOpacity(DEFAULT_STARTVALUE);
+    m_pPropertyAnimation->start();
+}
+
+void QTextPill::paint(QPainter *pPainter, const QStyleOptionGraphicsItem *,
                  QWidget *)
 {
-    pPainter->setRenderHint(QPainter::Antialiasing);
+    pPainter->setRenderHints(QPainter::Antialiasing |
+                             QPainter::TextAntialiasing |
+                             QPainter::HighQualityAntialiasing);
 
     pPainter->setPen(Qt::NoPen);
     pPainter->setBrush(m_colorFill);
 
-    QRectF rect = outlineRect();
+    QRectF rect = boundingRect();
+
     pPainter->drawRoundRect(rect, rect.height()/rect.width() * 100,
                             100.0);
 
@@ -33,25 +67,31 @@ void TextPill::paint(QPainter *pPainter,
     pPainter->drawText(rect, Qt::AlignCenter, m_text);
 }
 
-void TextPill::setText(const QString &text)
+void QTextPill::setText(QString text)
 {
     prepareGeometryChange();
     m_text = text;
     update();
 }
 
-QRectF TextPill::outlineRect(void) const
+QRectF QTextPill::boundingRect() const
 {
     QFontMetricsF metrics = QApplication::font();
-    QRectF rect = metrics.boundingRect(m_text);
-    rect.adjust(-metrics.height(), -metrics.height()/2, +metrics.height(), +metrics.height()/2);
-    rect.translate(-rect.center());
+
+    QRectF rect(0, 0,
+                metrics.boundingRect(m_text).width() +
+                MARGIN_WIDTH_FACTOR *
+                metrics.boundingRect(m_text).height(),
+                MARGIN_HEIGHT_FACTOR *
+                metrics.boundingRect(m_text).height());
     return rect;
 }
 
-QRectF TextPill::boundingRect() const
+/*QPainterPath TextPill::shape() const
 {
-    const int Margin = 1;
-    return outlineRect().adjusted(-Margin, -Margin, +Margin, +Margin);
-}
-
+    QPainterPath path;
+    QRectF rect = boundingRect();
+    path.addRoundedRect(rect, rect.height()/rect.width() * 100,
+                         100.0);
+    return path;
+}*/

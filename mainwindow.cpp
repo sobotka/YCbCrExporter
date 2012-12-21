@@ -233,35 +233,34 @@ void MainWindow::actionMenuFileOpen()
 
 void MainWindow::actionMenuFileQuit()
 {
-    QApplication::exit();
+    actionSequenceNew();
+    //QApplication::exit();
 }
 
 void MainWindow::actionMenuViewFitToView()
 {
     m_pDSLRLabView->fitToView();
+    m_pDSLRLabView->m_pTextPill->init("Fit to View");
+    m_pDSLRLabView->m_pTextPill->start();
 }
 
 void MainWindow::actionMenuViewZoom1x()
 {
     m_pDSLRLabView->resetTransform();
+    m_pDSLRLabView->m_pTextPill->init("Zoom 1x");
+    m_pDSLRLabView->m_pTextPill->start();
 }
 
 void MainWindow::actionMenuViewZoom2x()
 {
-    if (m_pDSLRLabView->underMouse())
-        m_pDSLRLabView->setScale(2.0,
-                                 m_pDSLRLabView->mapFromGlobal(QCursor::pos()));
-    else
-        m_pDSLRLabView->setScale(2.0, m_pDSLRLabView->getCenter().toPoint());
+    m_pDSLRLabView->m_pTextPill->init("Zoom 2x");
+    m_pDSLRLabView->m_pTextPill->start();
 }
 
 void MainWindow::actionMenuViewZoom4x()
 {
-    if (m_pDSLRLabView->underMouse())
-        m_pDSLRLabView->setScale(4.0,
-                                 m_pDSLRLabView->mapFromGlobal(QCursor::pos()));
-    else
-        m_pDSLRLabView->setScale(4.0, m_pDSLRLabView->getCenter().toPoint());
+    m_pDSLRLabView->m_pTextPill->init("Zoom 4x");
+    m_pDSLRLabView->m_pTextPill->start();
 }
 
 // Signals and slots must match 1:1 with variable declarations. Frames

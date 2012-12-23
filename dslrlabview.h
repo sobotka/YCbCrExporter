@@ -29,7 +29,7 @@
 #define TEXT_PADDING_Y                          10
 
 #define MAXIMUM_SCALE                           10.00
-#define MINIMUM_SCALE                           0.400
+#define MINIMUM_SCALE                           0.250
 
 class QBaseGraphicsView : public QGraphicsView
 {
@@ -55,19 +55,25 @@ public:
     void resetTransform(void);
     void updateCurrentFrame(long);
     void fitToView(void);
-    void openFile(char*);
     long getTotalFrames(void);
+
     bool isValidSequence(void);
-    void sequenceNew(void);
+    void openSequence(char*);
+    void closeSequence(void);
+
     QGraphicsPixmapItem* getGraphicsPixmapItem(void) { return m_pGraphicsPixmapItem; }
 
 signals:
+    void signal_sequenceClose(void);
     void signal_sequenceNew(void);
     void signal_frameChanged(long);
+    void signal_error(QString);
 
 public slots:
-    void scalingTime(qreal x);
-    void animFinished(void);
+    void onScaleTimeslice(qreal x);
+    void onScaleAnimFinished(void);
+    void onSequenceNew(void);
+    void onSequenceClose(void);
 
 private:
     QBaseGraphicsView                      *m_pGraphicsView;

@@ -14,6 +14,7 @@
 #include <QAction>
 #include <QMenu>
 #include <QPlainTextEdit>
+#include <QMessageBox>
 
 #define DSLRLAB_DEFAULT_WIDTH               1000
 #define DSLRLAB_DEFAULT_HEIGHT              562
@@ -29,9 +30,12 @@
 #define LOG_MSG(...)
 #endif
 
+class MainWindow;
+
 namespace Ui {
 class MainWindow;
 }
+
 
 class CustomApplication : public QApplication
 {
@@ -41,6 +45,8 @@ public:
 
     // reimplemented from QApplication so we can throw exceptions in slots
     virtual bool notify(QObject*, QEvent*);
+
+    MainWindow              *m_pMainWindow;
 };
 
 class MainWindow : public QMainWindow
@@ -66,6 +72,7 @@ private slots:
 
     void actionOpenFile(QString);
 
+    void actionError(QString);
 private:
     // Layouts
     QVBoxLayout                            *m_pVBoxLayout;
@@ -81,6 +88,7 @@ private:
     QSplitter                              *m_pVSplitter;
 
     // Actions
+    QActionGroup                           *m_pViewActionGroup;
     //QAction            *m_pFileOpenAction;
     QAction                                *m_pActionFileOpen;
     QAction                                *m_pActionFileQuit;

@@ -33,16 +33,13 @@ bool CustomApplication::notify(QObject *receiver, QEvent *event)
     }
     catch(std::exception& e)
     {
-        QMessageBox msgBox(activeWindow());
-
-        msgBox.setText(e.what());
-        msgBox.setInformativeText(tr("This should have been caught. Report a"
-                                     "bug with the above information please."));
-        msgBox.setStandardButtons(QMessageBox::Close);
-        msgBox.setIcon(QMessageBox::Critical);
-        msgBox.setWindowModality(Qt::WindowModal);
-
-        msgBox.exec();
+        if (m_pMainWindow)
+        {
+            QString message("An unexpected error has occurred. Please "
+                    "report the issue at GitHub with <" + QString(e.what()) + "> included "
+                    "and relevant information.");
+            QMessageBox::critical(m_pMainWindow, e.what(), message);
+        }
     }
     return false;
 }
@@ -126,29 +123,43 @@ void MainWindow::openFile(void)
                                 tr("MOV Files (*.MOV);;All Files (*)"),
                                 &selectedFilter,
                                 options);
+    if (!fileName.isNull())
+    {
+        m_pDSLRLabView->closeSequence();
 
-    QFuture<void> future = QtConcurrent::run(this, &MainWindow::actionOpenFile, fileName);
+        // TODO: This will race out in the event that a sequence is loaded
+        // and the application is closed obviously. In order to avoid this
+        // issue, a proper QThread class needs to be created and, upon
+        // closing, the thread halted with proper cleanup.
+        QFuture<void> future =
+                QtConcurrent::run(this, &MainWindow::actionOpenFile,
+                                  fileName);
+    }
 }
 
 void MainWindow::updateUI(bool isValid)
 {
     if (isValid)
     {
+        connect(m_pSlider, SIGNAL(valueChanged(int)), this,
+                SLOT(actionFrameChange(int)));
+        m_pViewActionGroup->setEnabled(true);
         m_pSlider->setMinimum(FF_FIRST_FRAME);
         m_pSlider->setMaximum(m_pDSLRLabView->getTotalFrames());
         m_pSlider->setValue(FF_FIRST_FRAME);
         m_pSlider->setEnabled(true);
         m_pMenuView->setEnabled(true);
-        m_pDSLRLabView->getGraphicsPixmapItem()->setVisible(true);
     }
     else
     {
+        disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
+                SLOT(actionFrameChange(int)));
+        m_pViewActionGroup->setDisabled(true);
         m_pSlider->setMinimum(0);
         m_pSlider->setValue(0);
         m_pSlider->setMaximum(0);
         m_pSlider->setEnabled(false);
         m_pMenuView->setEnabled(false);
-        m_pDSLRLabView->getGraphicsPixmapItem()->setVisible(false);
     }
 }
 
@@ -156,9 +167,6 @@ void MainWindow::createActions(void)
 {
     DSLRLabView::connect(m_pDSLRLabView, SIGNAL(signal_frameChanged(long)),
                          this, SLOT(actionFrameChange(long)));
-
-    DSLRLabView::connect(m_pDSLRLabView, SIGNAL(signal_sequenceNew()),
-                         this, SLOT(actionSequenceNew()));
 
     // File Menu Actions
     m_pActionFileOpen = new QAction(tr("&Open"), this);
@@ -171,30 +179,37 @@ void MainWindow::createActions(void)
     connect(m_pActionFileQuit, SIGNAL(triggered()), this,
             SLOT(actionMenuFileQuit()));
 
+    m_pViewActionGroup = new QActionGroup(this);
+
     // View Menu Actions
     m_pActionViewFitToView = new QAction(tr("&Fit to View"), this);
     m_pActionViewFitToView->setShortcut(tr("`"));
     connect(m_pActionViewFitToView, SIGNAL(triggered()), this,
             SLOT(actionMenuViewFitToView()));
+    m_pViewActionGroup->addAction(m_pActionViewFitToView);
 
     m_pActionViewZoom1x = new QAction(tr("Zoom &1x"), this);
     m_pActionViewZoom1x->setShortcut(tr("1"));
     connect(m_pActionViewZoom1x, SIGNAL(triggered()), this,
             SLOT(actionMenuViewZoom1x()));
+    m_pViewActionGroup->addAction(m_pActionViewZoom1x);
 
     m_pActionViewZoom2x = new QAction(tr("Zoom in by &2x"), this);
     m_pActionViewZoom2x->setShortcut(tr("2"));
     connect(m_pActionViewZoom2x, SIGNAL(triggered()), this,
             SLOT(actionMenuViewZoom2x()));
+    m_pViewActionGroup->addAction(m_pActionViewZoom2x);
 
     m_pActionViewZoom4x = new QAction(tr("Zoom in by &4x"), this);
     m_pActionViewZoom4x->setShortcut(tr("4"));
     connect(m_pActionViewZoom4x, SIGNAL(triggered()), this,
             SLOT(actionMenuViewZoom4x()));
+    m_pViewActionGroup->addAction(m_pActionViewZoom4x);
 
-    // Frame Change Actions
-    connect(m_pSlider, SIGNAL(valueChanged(int)), this,
-            SLOT(actionFrameChange(int)));
+    connect(m_pDSLRLabView, SIGNAL(signal_error(QString)), this,
+            SLOT(actionError(QString)));
+    connect(m_pDSLRLabView, SIGNAL(signal_sequenceNew()), this,
+            SLOT(actionSequenceNew()));
 }
 
 void MainWindow::createMenus(void)
@@ -226,40 +241,39 @@ void MainWindow::actionMenuFileOpen()
     }
     catch (std::exception e)
     {
-        m_pSlider->setEnabled(false);
+        updateUI(m_pDSLRLabView->isValidSequence());
         throw;
     }
 }
 
 void MainWindow::actionMenuFileQuit()
 {
-    actionSequenceNew();
-    //QApplication::exit();
+    QApplication::exit();
 }
 
 void MainWindow::actionMenuViewFitToView()
 {
     m_pDSLRLabView->fitToView();
-    m_pDSLRLabView->m_pTextPill->init("Fit to View");
+    m_pDSLRLabView->m_pTextPill->init(tr("Fit to View"));
     m_pDSLRLabView->m_pTextPill->start();
 }
 
 void MainWindow::actionMenuViewZoom1x()
 {
     m_pDSLRLabView->resetTransform();
-    m_pDSLRLabView->m_pTextPill->init("Zoom 1x");
+    m_pDSLRLabView->m_pTextPill->init(tr("Zoom 1x"));
     m_pDSLRLabView->m_pTextPill->start();
 }
 
 void MainWindow::actionMenuViewZoom2x()
 {
-    m_pDSLRLabView->m_pTextPill->init("Zoom 2x");
+    m_pDSLRLabView->m_pTextPill->init(tr("Zoom 2x"));
     m_pDSLRLabView->m_pTextPill->start();
 }
 
 void MainWindow::actionMenuViewZoom4x()
 {
-    m_pDSLRLabView->m_pTextPill->init("Zoom 4x");
+    m_pDSLRLabView->m_pTextPill->init(tr("Zoom 4x"));
     m_pDSLRLabView->m_pTextPill->start();
 }
 
@@ -280,7 +294,6 @@ void MainWindow::actionFrameChange(long frame)
 
 void MainWindow::actionSequenceNew()
 {
-    m_pDSLRLabView->sequenceNew();
     updateUI(m_pDSLRLabView->isValidSequence());
 }
 
@@ -290,11 +303,15 @@ void MainWindow::actionOpenFile(QString fileName)
     {
         if (fileName.isNull())
             throw ffError("fileName.isNull()", FFERROR_BAD_FILENAME);
-        m_pDSLRLabView->openFile(fileName.toUtf8().data());
+        m_pDSLRLabView->openSequence(fileName.toUtf8().data());
 
     }
     catch (ffError eff)
     {
+        /* We should never get here after the emit based refactor.
+         * leaving in place in the event that this estimation is
+         * wrong. Needs testing.
+         *
         // To simplify our code above this call so that we can avoid many if
         // else situations, simply rethrow the exception and take no
         // extraordinary action when the filename is NULL, indicating a cancel.
@@ -315,6 +332,23 @@ void MainWindow::actionOpenFile(QString fileName)
             msgBox.setWindowModality(Qt::WindowModal);
 
             msgBox.exec();
-        }
+        } */
     }
+}
+
+void MainWindow::actionError(QString message)
+{
+    QMessageBox msgBox(this);
+
+    QString errorMessage =
+            tr("There was an error loading the video file specified. "
+               "Please confirm that the file type is supported. "
+               "Error: <<") + message + ">>";
+    msgBox.setText(tr("Error loading file"));
+    msgBox.setInformativeText(errorMessage);
+    msgBox.setStandardButtons(QMessageBox::Close);
+    msgBox.setIcon(QMessageBox::Critical);
+    msgBox.setWindowModality(Qt::WindowModal);
+
+    msgBox.exec();
 }

@@ -143,6 +143,8 @@ public:
     ~ffSequence();
 
     void openFile(char*);
+    void closeFile(void);
+
     ffRawFrame* getRawFrame(long);
     ffRawFrame* setCurrentFrame(long);
     long getCurrentFrame(void);

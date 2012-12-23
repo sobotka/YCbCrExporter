@@ -94,8 +94,10 @@ void DSLRLabView::initObjects(void)
 
     m_pTextPill->setPos(TEXT_PADDING_X, TEXT_PADDING_Y);
 
-    connect(m_pTimeLine, SIGNAL(valueChanged(qreal)), SLOT(scalingTime(qreal)));
-    connect(m_pTimeLine, SIGNAL(finished()), SLOT(animFinished()));
+    connect(m_pTimeLine, SIGNAL(valueChanged(qreal)), SLOT(onScaleTimeslice(qreal)));
+    connect(m_pTimeLine, SIGNAL(finished()), SLOT(onScaleAnimFinished()));
+    connect(this, SIGNAL(signal_sequenceNew()), this, SLOT(onSequenceNew()));
+    connect(this, SIGNAL(signal_sequenceClose()), this, SLOT(onSequenceClose()));
 }
 
 DSLRLabView::~DSLRLabView()
@@ -113,7 +115,7 @@ DSLRLabView::~DSLRLabView()
     delete m_pGraphicsScene;*/
 }
 
-void DSLRLabView::scalingTime(qreal)
+void DSLRLabView::onScaleTimeslice(qreal)
 {
     QTransform matrix(m_pGraphicsView->matrix());
     qreal factor = 1.0 + qreal(_numScheduledScalings) / 500.0;
@@ -131,7 +133,7 @@ void DSLRLabView::scalingTime(qreal)
     m_pGraphicsView->setTransform(QTransform(matrix));
 }
 
-void DSLRLabView::animFinished(void)
+void DSLRLabView::onScaleAnimFinished(void)
 {
     if (_numScheduledScalings > 0)
         _numScheduledScalings--;
@@ -172,24 +174,7 @@ void DSLRLabView::fitToView()
     m_pGraphicsView->fitInView(m_pGraphicsPixmapItem, Qt::KeepAspectRatio);
 }
 
-void DSLRLabView::openFile(char *fileName)
-{
-    try
-    {
-        m_pffSequence->openFile(fileName);
-        m_pGraphicsView->setSceneRect(0, 0,
-                     m_pffSequence->getLumaSize().m_width,
-                     m_pffSequence->getLumaSize().m_height);
-        emit signal_sequenceNew();
-    }
-    catch (ffError eff)
-    {
-        throw;
-    }
-
-}
-
-void DSLRLabView::sequenceNew(void)
+void DSLRLabView::onSequenceNew(void)
 {
     m_pTextPill->init(QString::fromStdString(m_pffSequence->getFilename()));
 
@@ -197,6 +182,14 @@ void DSLRLabView::sequenceNew(void)
     fitToView();
 
     m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadeIn);
+    m_pFadeInAnimation->setDirection(QAbstractAnimation::Forward);
+    m_pFadeInAnimation->start();
+}
+
+void DSLRLabView::onSequenceClose(void)
+{
+    m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadeIn);
+    m_pFadeInAnimation->setDirection(QAbstractAnimation::Backward);
     m_pFadeInAnimation->start();
 }
 
@@ -208,6 +201,42 @@ long DSLRLabView::getTotalFrames(void)
 bool DSLRLabView::isValidSequence(void)
 {
     return m_pffSequence->isValid();
+}
+
+void DSLRLabView::openSequence(char *fileName)
+{
+    try
+    {
+        m_pffSequence->openFile(fileName);
+        m_pGraphicsView->setSceneRect(0, 0,
+                     m_pffSequence->getLumaSize().m_width,
+                     m_pffSequence->getLumaSize().m_height);
+        emit signal_sequenceNew();
+    }
+    catch (ffmpegError ffeff)
+    {
+        char errorC[AV_ERROR_MAX_STRING_SIZE];
+        av_strerror(ffeff.getError(), errorC, AV_ERROR_MAX_STRING_SIZE);
+
+        QString message = tr("FFMPEG: ") + QString(ffeff.what()) + " (" +
+                QString(errorC) + ")";
+        emit signal_error(message);
+    }
+    catch (ffError eff)
+    {
+        QString message = tr("FFSEQUENCE: ") + QString(eff.what()) + " (" +
+                QString::number(eff.getError()) + ")";
+        emit signal_error(message);
+    }
+}
+
+void DSLRLabView::closeSequence(void)
+{
+    if (isValidSequence())
+    {
+        m_pffSequence->closeFile();
+        emit signal_sequenceClose();
+    }
 }
 
 void DSLRLabView::wheelEvent(QWheelEvent* event)

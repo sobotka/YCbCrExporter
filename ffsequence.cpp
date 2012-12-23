@@ -138,6 +138,7 @@ void ffSequence::pushRawFrame(AVFrame *pAVFrame)
 
 void ffSequence::cleanup(void)
 {
+    freeRawFrames();
     if (m_pCodecCtx)
     {
         avcodec_close(m_pCodecCtx);
@@ -149,8 +150,6 @@ void ffSequence::cleanup(void)
         avformat_close_input(&m_pFormatCtx);
         m_pFormatCtx = NULL;
     }
-
-    freeRawFrames();
 
     // The rest of the API relies on the various variables and makes
     // assumptions they are applicable. Zero them out.
@@ -269,11 +268,21 @@ void ffSequence::openFile(char *filename)
         fileURI = filename;
         setCurrentFrame(FF_FIRST_FRAME);
     }
+    catch(ffmpegError ffmpegErr)
+    {
+        cleanup();
+        throw;
+    }
     catch(ffError ffErr)
     {
         cleanup();
-        throw ffErr;
+        throw;
     }
+}
+
+void ffSequence::closeFile(void)
+{
+    cleanup();
 }
 
 ffRawFrame* ffSequence::getRawFrame(long frame)

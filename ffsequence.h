@@ -116,6 +116,14 @@ public:
 
 class ffSequence
 {
+public:
+    enum ffSequenceState
+    {
+        isLoading,
+        isValid,
+        isInvalid
+    };
+
 private:
     AVFormatContext                        *m_pFormatCtx;
     AVCodecContext                         *m_pCodecCtx;
@@ -130,7 +138,7 @@ private:
     static bool                             m_isInitialized;
     std::vector<ffRawFrame*>                m_frames;
     std::vector<ffRawFrameFloat*>           m_framesFloat;
-    bool                                    m_isValid;
+    ffSequenceState                         m_state;
 
     std::string                             fileURI;
 
@@ -151,7 +159,11 @@ public:
     long getTotalFrames(void);
     ffSize getLumaSize(void);
     ffSize getChromaSize(void);
-    bool isValid(void);
+    ffSequenceState getState(void);
     std::string getFilename(void);
+
+    virtual void onProgressStart(void);
+    virtual void onProgress(double);
+    virtual void onProgressEnd(void);
 };
 #endif // FFSEQUENCE_H

@@ -5,7 +5,8 @@
 
 #include <stdio.h>
 
-QTextPill::QTextPill(void) :
+QTextPill::QTextPill(QGraphicsItem *parent) :
+    QGraphicsItem(parent),
     m_colorFill(DEFAULT_FILLCOLOR), m_colorText(DEFAULT_TEXTCOLOR), m_text(""),
     m_pEffect(NULL), m_pPropertyAnimation(NULL)
 {
@@ -31,19 +32,24 @@ void QTextPill::initObjects(void)
     init();
 }
 
-void QTextPill::init(QString text, int dur, qreal start, qreal end)
+void QTextPill::init(QString text, bool inverse, int dur, qreal start, qreal end)
 {
     setOpacity(DEFAULT_ENDVALUE);
     setText(text);
+    if (inverse)
+        m_pPropertyAnimation->setDirection(QAbstractAnimation::Backward);
+    else
+        m_pPropertyAnimation->setDirection(QAbstractAnimation::Forward);
     m_pPropertyAnimation->setDuration(dur);
     m_pPropertyAnimation->setStartValue(start);
     m_pPropertyAnimation->setEndValue(end);
     m_pPropertyAnimation->setEasingCurve(QEasingCurve::InQuint);
 }
 
-void QTextPill::start()
+void QTextPill::start(QString text, bool inverse)
 {
     m_pPropertyAnimation->stop();
+    init(text, inverse);
     setOpacity(DEFAULT_STARTVALUE);
     m_pPropertyAnimation->start();
 }
@@ -60,7 +66,7 @@ void QTextPill::paint(QPainter *pPainter, const QStyleOptionGraphicsItem *,
 
     QRectF rect = boundingRect();
 
-    pPainter->drawRoundRect(rect, rect.height()/rect.width() * 100,
+    pPainter->drawRoundRect(rect, rect.height()/rect.width() * 100.0,
                             100.0);
 
     pPainter->setPen(m_colorText);

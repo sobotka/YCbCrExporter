@@ -2,7 +2,7 @@
 #define MAINWINDOW_H
 
 #include <dslrlabview.h>
-#include <ffsequence.h>
+#include "ffsequence.h"
 
 #include <QApplication>
 #include <QMainWindow>
@@ -15,6 +15,8 @@
 #include <QMenu>
 #include <QPlainTextEdit>
 #include <QMessageBox>
+#include <QFuture>
+#include <QWaitCondition>
 
 #define DSLRLAB_DEFAULT_WIDTH               1000
 #define DSLRLAB_DEFAULT_HEIGHT              562
@@ -68,7 +70,9 @@ private slots:
     void actionFrameChange(int);
     void actionFrameChange(long);
 
-    void actionSequenceNew(void);
+    void onSequenceNew(void);
+    void onSequenceClose(void);
+    void onSequenceStartOpen(void);
 
     void actionOpenFile(QString);
 
@@ -102,12 +106,14 @@ private:
     // Menus
     QMenu                                  *m_pMenuFile;
     QMenu                                  *m_pMenuView;
+
     // Other
+    QFuture<void>                           m_workerThread;
 
     void openFile(void);
     void createActions(void);
     void createMenus(void);
-    void updateUI(bool);
+    void updateUI(ffSequence::ffSequenceState);
 };
 
 #endif // MAINWINDOW_H

@@ -113,7 +113,8 @@ bool ffSequence::m_isInitialized;
 ffSequence::ffSequence(void):
     m_pFormatCtx(NULL), m_pCodecCtx(NULL), m_pCodec(NULL),
     m_totalFrames(FF_NO_FRAME), m_currentFrame(FF_NO_FRAME), m_lumaSize(0,0),
-    m_chromaSize(0,0), m_scaledSize(0,0), m_stream(FF_NO_STREAM), m_isValid(false)
+    m_chromaSize(0,0), m_scaledSize(0,0), m_stream(FF_NO_STREAM),
+    m_state(isInvalid)
 {
     if (!m_isInitialized)
         initialize();
@@ -134,6 +135,7 @@ void ffSequence::pushRawFrame(AVFrame *pAVFrame)
 {
     ffRawFrame* pRawFrame = new ffRawFrame(pAVFrame);
     m_frames.push_back(pRawFrame);
+    onProgress((double)m_frames.size() / (double)m_totalFrames);
 }
 
 void ffSequence::cleanup(void)
@@ -158,7 +160,7 @@ void ffSequence::cleanup(void)
     m_lumaSize = ffSize(FF_NO_DIMENSION, FF_NO_DIMENSION);
     m_chromaSize = ffSize(FF_NO_DIMENSION, FF_NO_DIMENSION);
     m_stream = FF_NO_STREAM;
-    m_isValid = false;
+    m_state = isInvalid;
 }
 
 void ffSequence::freeRawFrames(void)
@@ -175,6 +177,7 @@ void ffSequence::openFile(char *filename)
     try
     {
         cleanup();
+        m_state = isLoading;
 
         int retValue = -1;
 
@@ -230,6 +233,8 @@ void ffSequence::openFile(char *filename)
 
         ffAVPacket    tempPacket;
         int         got_picture = -1;
+
+        onProgressStart();
         // Primary loop to iterate over the frames, allocate our ffRawFrames,
         // and push them into the vector storage.
         while (retValue = av_read_frame(m_pFormatCtx, &tempPacket), retValue == 0)
@@ -264,7 +269,7 @@ void ffSequence::openFile(char *filename)
             av_freep(pTempFrame);
 
         // Only if we make it this far is the ffSequence object valid.
-        m_isValid = true;
+        m_state = isValid;
         fileURI = filename;
         setCurrentFrame(FF_FIRST_FRAME);
     }
@@ -320,12 +325,27 @@ ffSize ffSequence::getChromaSize(void)
     return m_chromaSize;
 }
 
-bool ffSequence::isValid(void)
+ffSequence::ffSequenceState ffSequence::getState(void)
 {
-    return m_isValid;
+    return m_state;
 }
 
 std::string ffSequence::getFilename(void)
 {
     return fileURI;
+}
+
+void ffSequence::onProgressStart(void)
+{
+
+}
+
+void ffSequence::onProgress(double)
+{
+
+}
+
+void ffSequence::onProgressEnd(void)
+{
+
 }

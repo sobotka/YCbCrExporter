@@ -8,6 +8,12 @@
 #include <QVBoxLayout>
 #include <QTimeLine>
 #include <QApplication>
+#include <QProgressBar>
+#include <QGraphicsGridLayout>
+#include <QGraphicsWidget>
+#include <QGraphicsProxyWidget>
+#include <QGraphicsLinearLayout>
+#include <QVBoxLayout>
 
 #include "textpill.h"
 #include "ffsequence.h"
@@ -17,19 +23,45 @@
 #define DSLRVIEW_WHEEL_SCALEFACTOR              1.15f
 #define DSLRVIEW_OVERLAY_MARGIN                 80
 // Animations and Transitions
-#define DSLRVIEW_DURATION_INTROFADEIN           500
+#define DSLRVIEW_DURATION_INTROFADEIN           250
 #define DSLRVIEW_DURATION_TEXTFADEOUT           3000
+
+#define PROGRESS_FADE_DURATION                  1000
+#define PROGRESS_HEIGHT                         6
+#define PROGRESS_MAXIMUM                        1000
+
 #define DSLRVIEW_TRANSPARENT                    0.0
 #define DSLRVIEW_OPAQUE                         1.0
 
-#define DSLRVIEW_ZOOM_DURATION                  350
-#define DSLRVIEW_ZOOM_UPDATE                    16
+#define TIMELINE_DURATION                       350
+#define TIMELINE_ZOOM_UPDATE                    16
+#define TIMELINE_PROGRESS_UPDATE                16
+#define TIMELINE_PROGRESS_DELAY                 0.05
 
-#define TEXT_PADDING_X                          10
-#define TEXT_PADDING_Y                          10
+#define DEFAULT_PADDING                         10
+#define TEXT_PADDING_X                          DEFAULT_PADDING
+#define TEXT_PADDING_Y                          DEFAULT_PADDING
 
 #define MAXIMUM_SCALE                           10.00
 #define MINIMUM_SCALE                           0.250
+
+class progressffSequence : public QObject, public ffSequence
+{
+    Q_OBJECT
+
+signals:
+    void signal_progressStart(void);
+    void signal_progress(double);
+    void signal_progressEnd(void);
+
+private:
+    void onProgressStart(void);
+    void onProgress(double);
+    void onProgressEnd(void);
+public:
+    explicit progressffSequence(QWidget *parent = 0) :
+        QObject(parent), ffSequence() {}
+};
 
 class QBaseGraphicsView : public QGraphicsView
 {
@@ -47,7 +79,6 @@ class DSLRLabView : public QWidget
     Q_OBJECT
 
 public:
-    QTextPill                              *m_pTextPill; // Public temp.
     explicit DSLRLabView(QWidget *parent = 0);
     ~DSLRLabView();
 
@@ -57,13 +88,15 @@ public:
     void fitToView(void);
     long getTotalFrames(void);
 
-    bool isValidSequence(void);
+    ffSequence::ffSequenceState getState(void);
     void openSequence(char*);
     void closeSequence(void);
 
-    QGraphicsPixmapItem* getGraphicsPixmapItem(void) { return m_pGraphicsPixmapItem; }
+    QGraphicsPixmapItem* getGraphicsPixmapItem(void);
+    QTextPill* getTextPillItem(void);
 
 signals:
+    void signal_sequenceStartOpen(void);
     void signal_sequenceClose(void);
     void signal_sequenceNew(void);
     void signal_frameChanged(long);
@@ -74,6 +107,12 @@ public slots:
     void onScaleAnimFinished(void);
     void onSequenceNew(void);
     void onSequenceClose(void);
+    void onSequenceStartOpen(void);
+    void onError(QString);
+    void onProgressStart(void);
+    void onProgress(double);
+    void onProgressEnd(void);
+    void onProgressAnimation(qreal);
 
 private:
     QBaseGraphicsView                      *m_pGraphicsView;
@@ -84,16 +123,23 @@ private:
 
     QGraphicsPixmapItem                    *m_pGraphicsPixmapItem;
 
-    ffSequence                             *m_pffSequence;
+    progressffSequence                     *m_pffSequence;
 
     QTimeLine                              *m_pTimeLine;
 
-    //QTextPill                              *m_pTextPill;
+    QGraphicsOpacityEffect                 *m_pFadePixmap;
+    QPropertyAnimation                     *m_pFadePixmapAnimation;
 
-    QGraphicsOpacityEffect                 *m_pFadeIn;
-    QPropertyAnimation                     *m_pFadeInAnimation;
+    QGraphicsOpacityEffect                 *m_pFadeProgressBar;
+    QPropertyAnimation                     *m_pFadeProgressBarAnimation;
+    QTimeLine                              *m_pProgressTimeline;
+
+    QProgressBar                           *m_pProgressBar;
+    QGraphicsWidget                        *m_pgwProgressBar;
+    QTextPill                              *m_pTextPill;
 
     int                                     _numScheduledScalings;
+    int                                     _targetProgress;
 
     void createObjects(void);
     void createAnimations(void);

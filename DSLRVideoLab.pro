@@ -23,6 +23,4 @@ HEADERS  += mainwindow.h \
     ffsequence.h \
     textpill.h
 
-FORMS    += mainwindow.ui
-
 unix|win32: LIBS += -lavformat

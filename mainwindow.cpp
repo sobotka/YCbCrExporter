@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include "ui_mainwindow.h"
 #include "ffsequence.h"
 
 #include <QDesktopWidget>
@@ -7,6 +6,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QtCore>
+#include <QtGui>
 
 //***********************
 // * CustomApplication

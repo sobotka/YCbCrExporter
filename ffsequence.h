@@ -20,6 +20,7 @@ extern "C"
 #define FF_Y                                                0
 #define FF_CB                                               1
 #define FF_CR                                               2
+#define FF_COMBINED                                         3
 
 #define FF_FIRST_FRAME                                      1
 #define FF_NO_FRAME                                        -1
@@ -88,7 +89,7 @@ private:
 public:
     enum PlaneType
     {
-        Y, Cb, Cr
+        Y = FF_Y, Cb = FF_CB, Cr = FF_CR, Combined = FF_COMBINED
     };
 
     unsigned char                  *m_pY;

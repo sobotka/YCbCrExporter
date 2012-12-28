@@ -1,12 +1,6 @@
 #include "dslrlabview.h"
 
-#include <QGraphicsScene>
-#include <QGraphicsTextItem>
-#include <QTextStream>
-#include <QScrollBar>
-#include <QMouseEvent>
-#include <QWheelEvent>
-#include <QDebug>
+#include <QtGui>
 
 #include <exception>
 
@@ -119,6 +113,8 @@ void DSLRLabView::initObjects(void)
     m_pProgressTimeline->setUpdateInterval(TIMELINE_PROGRESS_UPDATE);
     m_pTimeLine->setUpdateInterval(TIMELINE_ZOOM_UPDATE);
 
+    m_displayPlane = ffRawFrame::Combined;
+
     connect(m_pTimeLine, SIGNAL(valueChanged(qreal)),
             SLOT(onScaleTimeslice(qreal)));
     connect(m_pTimeLine, SIGNAL(finished()), SLOT(onScaleAnimFinished()));
@@ -181,6 +177,21 @@ QTextPill* DSLRLabView::getTextPillItem(void)
     return m_pTextPill;
 }
 
+ffRawFrame::PlaneType DSLRLabView::getDisplayPlane(void)
+{
+    return m_displayPlane;
+}
+
+void DSLRLabView::setDisplayPlane(ffRawFrame::PlaneType planeType)
+{
+    if ((getState() == ffSequence::isValid) && (planeType != m_displayPlane))
+    {
+        m_displayPlane = planeType;
+        updateCurrentFrame(m_pffSequence->getCurrentFrame());
+        m_pGraphicsView->setSceneRect(m_pGraphicsPixmapItem->boundingRect());
+    }
+}
+
 void DSLRLabView::onScaleTimeslice(qreal)
 {
     QTransform matrix(m_pGraphicsView->matrix());
@@ -214,12 +225,31 @@ void DSLRLabView::resetTransform()
 
 void DSLRLabView::updateCurrentFrame(long frame)
 {
-    ffRawFrame *pRawFrame = m_pffSequence->getRawFrame(frame);
+    QImage *pImage = NULL;
+    ffRawFrame *pRawFrame = m_pffSequence->setCurrentFrame(frame);
 
-    QImage *pImage = new QImage(pRawFrame->m_pY,
-                                      m_pffSequence->getLumaSize().m_width,
-                                      m_pffSequence->getLumaSize().m_height,
-                                      QImage::Format_Indexed8);
+    switch (m_displayPlane)
+    {
+    case (ffRawFrame::Combined):
+    case (ffRawFrame::Y):
+        pImage = new QImage(pRawFrame->m_pY,
+                                    m_pffSequence->getLumaSize().m_width,
+                                    m_pffSequence->getLumaSize().m_height,
+                                    QImage::Format_Indexed8);
+        break;
+    case (ffRawFrame::Cb):
+        pImage = new QImage(pRawFrame->m_pCb,
+                                    m_pffSequence->getChromaSize().m_width,
+                                    m_pffSequence->getChromaSize().m_height,
+                                    QImage::Format_Indexed8);
+        break;
+    case (ffRawFrame::Cr):
+        pImage = new QImage(pRawFrame->m_pCr,
+                                    m_pffSequence->getChromaSize().m_width,
+                                    m_pffSequence->getChromaSize().m_height,
+                                    QImage::Format_Indexed8);
+        break;
+    }
 
     m_pGraphicsPixmapItem->setPixmap(QPixmap::fromImage(*pImage));
     delete pImage;
@@ -232,7 +262,8 @@ void DSLRLabView::fitToView()
 
 void DSLRLabView::onSequenceNew(void)
 {
-    m_pTextPill->start(QString::fromStdString(m_pffSequence->getFilename()));
+    m_pTextPill->start(tr("Loaded file ") +
+                          QString::fromStdString(m_pffSequence->getFilename()));
 
     updateCurrentFrame(m_pffSequence->getCurrentFrame());
     fitToView();

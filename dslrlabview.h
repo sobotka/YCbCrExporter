@@ -86,7 +86,11 @@ public:
     void resetTransform(void);
     void updateCurrentFrame(long);
     void fitToView(void);
+
     long getTotalFrames(void);
+
+    ffRawFrame::PlaneType getDisplayPlane(void);
+    void setDisplayPlane(ffRawFrame::PlaneType);
 
     ffSequence::ffSequenceState getState(void);
     void openSequence(char*);
@@ -137,6 +141,8 @@ private:
     QProgressBar                           *m_pProgressBar;
     QGraphicsWidget                        *m_pgwProgressBar;
     QTextPill                              *m_pTextPill;
+
+    ffRawFrame::PlaneType                   m_displayPlane;
 
     int                                     _numScheduledScalings;
     int                                     _targetProgress;

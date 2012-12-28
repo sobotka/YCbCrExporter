@@ -4,22 +4,10 @@
 #include <dslrlabview.h>
 #include "ffsequence.h"
 
-#include <QApplication>
-#include <QMainWindow>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QLabel>
-#include <QSlider>
-#include <QSplitter>
-#include <QAction>
-#include <QMenu>
-#include <QPlainTextEdit>
-#include <QMessageBox>
-#include <QFuture>
-#include <QWaitCondition>
+#include <QtGui>
 
-#define DSLRLAB_DEFAULT_WIDTH               1000
-#define DSLRLAB_DEFAULT_HEIGHT              562
+#define DSLRLAB_DEFAULT_WIDTH               1280
+#define DSLRLAB_DEFAULT_HEIGHT              720
 #define DSLRLAB_SIDEBAR_RATIO               0
 #define DSLRLAB_PRIMARYVIEW_RATIO           5
 #define DSLRLAB_NOMARGIN                    0
@@ -74,6 +62,8 @@ private slots:
     void onSequenceClose(void);
     void onSequenceStartOpen(void);
 
+    void onDisplayPlaneChange(int);
+
     void actionOpenFile(QString);
 
     void actionError(QString);
@@ -85,7 +75,8 @@ private:
     QWidget                                *m_pMainAnchorWidget;
     QWidget                                *m_pUpperAnchorWidget;
     QWidget                                *m_pSidebarAnchorWidget;
-    QLabel                                 *m_pPlaceholderLabel;
+    QLabel                                 *m_pDisplayPlaneLabel;
+    QComboBox                              *m_pDisplayPlaneCombo;
     QPlainTextEdit                         *m_pPlainTextEdit;
     DSLRLabView                            *m_pDSLRLabView;
     QSlider                                *m_pSlider;
@@ -93,7 +84,7 @@ private:
 
     // Actions
     QActionGroup                           *m_pViewActionGroup;
-    //QAction            *m_pFileOpenAction;
+
     QAction                                *m_pActionFileOpen;
     QAction                                *m_pActionFileQuit;
     QAction                                *m_pActionViewFitToView;
@@ -111,6 +102,8 @@ private:
     QFuture<void>                           m_workerThread;
 
     void openFile(void);
+    void createObjects(void);
+    void initObjects(void);
     void createActions(void);
     void createMenus(void);
     void updateUI(ffSequence::ffSequenceState);

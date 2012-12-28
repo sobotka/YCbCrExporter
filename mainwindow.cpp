@@ -50,59 +50,8 @@ bool CustomApplication::notify(QObject *receiver, QEvent *event)
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent)
 {
-    setGeometry(QStyle::alignedRect(
-                    Qt::LeftToRight, Qt::AlignCenter,
-                    QSize(DSLRLAB_DEFAULT_WIDTH,
-                          DSLRLAB_DEFAULT_HEIGHT),
-                    QApplication::desktop()->availableGeometry()));
-
-    setWindowTitle(tr("YCbCr Lab"));
-
-    // Provide an empty anchoring widget to anchor the QVBoxLayout.
-    m_pMainAnchorWidget = new QWidget;
-    m_pSidebarAnchorWidget = new QWidget;
-
-    m_pPlaceholderLabel = new QLabel(tr("Placeholder!!!"));
-
-    setCentralWidget(m_pMainAnchorWidget);
-
-    // Main top to bottom layout.
-    m_pVBoxLayout = new QVBoxLayout;
-    centralWidget()->setLayout(m_pVBoxLayout);
-
-    // Sidebar top to bottom layout.
-    m_pSidebarLayout = new QVBoxLayout;
-    m_pPlainTextEdit = new QPlainTextEdit;
-
-    QPalette tempPal = m_pPlainTextEdit->palette();
-    tempPal.setColor(QPalette::Base, tempPal.color(QPalette::Dark));
-    m_pPlainTextEdit->setPalette(tempPal);
-    m_pPlainTextEdit->setReadOnly(true);
-    //m_pPlainTextEdit->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
-
-    m_pSidebarAnchorWidget->setLayout(m_pSidebarLayout);
-    m_pSidebarLayout->addWidget(m_pPlaceholderLabel);
-    m_pSidebarLayout->setMargin(DSLRLAB_NOMARGIN);
-    m_pSidebarLayout->addWidget(m_pPlainTextEdit);
-
-    m_pVSplitter = new QSplitter(Qt::Horizontal);
-    m_pDSLRLabView = new DSLRLabView;
-
-    m_pVSplitter->addWidget(m_pSidebarAnchorWidget);
-    m_pVSplitter->addWidget(m_pDSLRLabView);
-
-    //Establish the scaling ratios initially.
-    m_pVSplitter->setStretchFactor(m_pVSplitter->indexOf(m_pSidebarAnchorWidget),
-                                   DSLRLAB_SIDEBAR_RATIO);
-    m_pVSplitter->setStretchFactor(m_pVSplitter->indexOf(m_pDSLRLabView),
-                                   DSLRLAB_PRIMARYVIEW_RATIO);
-
-    m_pSlider = new QSlider(Qt::Horizontal);
-
-    m_pVBoxLayout->addWidget(m_pVSplitter);
-    m_pVBoxLayout->addWidget(m_pSlider);
-
-
+    createObjects();
+    initObjects();
     createActions();
     createMenus();
 
@@ -154,6 +103,7 @@ void MainWindow::updateUI(ffSequence::ffSequenceState state)
         m_pSlider->setEnabled(true);
         m_pMenuView->setEnabled(true);
         m_pActionFileOpen->setEnabled(true);
+        m_pSlider->show();
         break;
     case (ffSequence::isInvalid):
         disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
@@ -165,6 +115,7 @@ void MainWindow::updateUI(ffSequence::ffSequenceState state)
         m_pSlider->setEnabled(false);
         m_pMenuView->setEnabled(false);
         m_pActionFileOpen->setEnabled(true);
+        m_pSlider->hide();
         break;
     case (ffSequence::isLoading):
         disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
@@ -176,8 +127,74 @@ void MainWindow::updateUI(ffSequence::ffSequenceState state)
         m_pSlider->setEnabled(false);
         m_pMenuView->setEnabled(false);
         m_pActionFileOpen->setEnabled(false);
+        m_pSlider->hide();
         break;
     }
+}
+
+void MainWindow::createObjects(void)
+{
+    // Provide an empty anchoring widget to anchor the QVBoxLayout.
+    m_pMainAnchorWidget = new QWidget;
+    m_pSidebarAnchorWidget = new QWidget;
+
+    m_pDisplayPlaneLabel = new QLabel(tr("Display Plane:"));
+    m_pDisplayPlaneCombo = new QComboBox;
+
+    // Main top to bottom layout.
+    m_pVBoxLayout = new QVBoxLayout;
+
+    // Sidebar top to bottom layout.
+    m_pSidebarLayout = new QVBoxLayout;
+    m_pPlainTextEdit = new QPlainTextEdit;
+
+    m_pVSplitter = new QSplitter(Qt::Horizontal);
+    m_pDSLRLabView = new DSLRLabView;
+
+    m_pSlider = new QSlider(Qt::Horizontal);
+}
+
+void MainWindow::initObjects(void)
+{
+    setGeometry(QStyle::alignedRect(
+                    Qt::LeftToRight, Qt::AlignCenter,
+                    QSize(DSLRLAB_DEFAULT_WIDTH,
+                          DSLRLAB_DEFAULT_HEIGHT),
+                    QApplication::desktop()->availableGeometry()));
+
+    setWindowTitle(tr("YCbCr Lab"));
+
+    setCentralWidget(m_pMainAnchorWidget);
+    centralWidget()->setLayout(m_pVBoxLayout);
+
+    m_pDisplayPlaneCombo->addItem(tr("Y"), ffRawFrame::Y);
+    m_pDisplayPlaneCombo->addItem(tr("Cb"), ffRawFrame::Cb);
+    m_pDisplayPlaneCombo->addItem(tr("Cr"), ffRawFrame::Cr);
+    m_pDisplayPlaneCombo->addItem(tr("Combined"), ffRawFrame::Combined);
+    m_pDisplayPlaneCombo->setCurrentIndex(m_pDSLRLabView->getDisplayPlane());
+
+    m_pSidebarAnchorWidget->setLayout(m_pSidebarLayout);
+    m_pSidebarLayout->setMargin(DSLRLAB_NOMARGIN);
+    m_pSidebarLayout->addWidget(m_pDisplayPlaneLabel);
+    m_pSidebarLayout->addWidget(m_pDisplayPlaneCombo);
+    m_pSidebarLayout->addWidget(m_pPlainTextEdit);
+
+    m_pVSplitter->addWidget(m_pSidebarAnchorWidget);
+    m_pVSplitter->addWidget(m_pDSLRLabView);
+
+    //Establish the scaling ratios initially.
+    m_pVSplitter->setStretchFactor(m_pVSplitter->indexOf(m_pSidebarAnchorWidget),
+                                   DSLRLAB_SIDEBAR_RATIO);
+    m_pVSplitter->setStretchFactor(m_pVSplitter->indexOf(m_pDSLRLabView),
+                                   DSLRLAB_PRIMARYVIEW_RATIO);
+
+    m_pVBoxLayout->addWidget(m_pVSplitter);
+    m_pVBoxLayout->addWidget(m_pSlider);
+
+    QPalette tempPal = m_pPlainTextEdit->palette();
+    tempPal.setColor(QPalette::Base, tempPal.color(QPalette::Dark));
+    m_pPlainTextEdit->setPalette(tempPal);
+    m_pPlainTextEdit->setReadOnly(true);
 }
 
 void MainWindow::createActions(void)
@@ -235,6 +252,8 @@ void MainWindow::createActions(void)
             SLOT(onSequenceClose()));
     connect(m_pDSLRLabView, SIGNAL(signal_sequenceStartOpen()), this,
             SLOT(onSequenceStartOpen()));
+    connect(m_pDisplayPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(onDisplayPlaneChange(int)));
 }
 
 void MainWindow::createMenus(void)
@@ -309,7 +328,7 @@ void MainWindow::actionFrameChange(int frame)
 
 void MainWindow::actionFrameChange(long frame)
 {
-    if (m_pDSLRLabView->getState())
+    if (m_pDSLRLabView->getState() == ffSequence::isValid)
         m_pDSLRLabView->updateCurrentFrame(frame);
 }
 
@@ -326,6 +345,11 @@ void MainWindow::onSequenceClose()
 void MainWindow::onSequenceStartOpen()
 {
     updateUI(ffSequence::isLoading);
+}
+
+void MainWindow::onDisplayPlaneChange(int plane)
+{
+    m_pDSLRLabView->setDisplayPlane((ffRawFrame::PlaneType)plane);
 }
 
 void MainWindow::actionOpenFile(QString fileName)

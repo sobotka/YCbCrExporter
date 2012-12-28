@@ -55,7 +55,7 @@ ffRawFrame::ffRawFrame(AVFrame* pFrame) :
     m_pCr   = new unsigned char[len_cr];
     for (long y = 0; y < c_height; y++)
         for (long x = 0; x < c_width; x++)
-            m_pCb[(y * c_width) + x] = pCr[(y * cr_stride) + x];
+            m_pCr[(y * c_width) + x] = pCr[(y * cr_stride) + x];
 }
 
 ffRawFrame::~ffRawFrame()

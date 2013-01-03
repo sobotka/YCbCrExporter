@@ -1,11 +1,7 @@
 #ifndef TEXTPILL_H
 #define TEXTPILL_H
 
-#include <QGraphicsItem>
-#include <QGraphicsOpacityEffect>
-#include <QPropertyAnimation>
-#include <QGraphicsWidget>
-#include <QGraphicsLayoutItem>
+#include <QtGui>
 
 #define DEFAULT_TEXTCOLOR               QColor(220,220,220)
 #define DEFAULT_FILLCOLOR               QColor(40,40,40)
@@ -20,7 +16,7 @@
 #define MARGIN_WIDTH_FACTOR             3.0
 #define MARGIN_HEIGHT_FACTOR            2.0
 
-class QTextPill : public QGraphicsItem
+class QTextPill : public QGraphicsWidget
 {
 private:
     QColor                  m_colorFill;

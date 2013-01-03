@@ -172,7 +172,7 @@ void ffSequence::freeRawFrames(void)
     }
 }
 
-void ffSequence::openFile(char *filename)
+void ffSequence::readFile(char *fileName)
 {
     try
     {
@@ -181,7 +181,7 @@ void ffSequence::openFile(char *filename)
 
         int retValue = -1;
 
-        retValue = avformat_open_input(&m_pFormatCtx, filename, NULL, NULL);
+        retValue = avformat_open_input(&m_pFormatCtx, fileName, NULL, NULL);
         if (retValue < 0)
             throw ffmpegError("avformat_open_input() < 0", retValue);
 
@@ -197,12 +197,12 @@ void ffSequence::openFile(char *filename)
                 break;
             }
         if (m_stream < 0)
-            throw ffError("m_stream < 0", FFERROR_NO_VIDEO_STREAM);
+            throw ffError("m_stream < 0", ffError::ERROR_NO_VIDEO_STREAM);
 
         m_pCodecCtx = m_pFormatCtx->streams[m_stream]->codec;
         if (m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P)
             throw ffError("m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P",
-                          FFERROR_BAD_FORMAT);
+                          ffError::ERROR_BAD_FORMAT);
 
         m_lumaSize = ffSize(m_pCodecCtx->width, m_pCodecCtx->height);
         // While we could simply assume that all 4:2:0 content is half width
@@ -219,7 +219,7 @@ void ffSequence::openFile(char *filename)
 
         m_pCodec = avcodec_find_decoder(m_pCodecCtx->codec_id);
         if (m_pCodec == NULL)
-            throw ffError("m_pCodec == NULL", FFERROR_NO_DECODER);
+            throw ffError("m_pCodec == NULL", ffError::ERROR_NO_DECODER);
 
         retValue = avcodec_open2(m_pCodecCtx, m_pCodec, NULL);
         if (retValue < 0)
@@ -229,7 +229,8 @@ void ffSequence::openFile(char *filename)
 
         AVFrame *pTempFrame = avcodec_alloc_frame();
         if (pTempFrame == NULL)
-            throw ffError("avcodec_alloc_frame() == NULL", FFERROR_ALLOC_ERROR);
+            throw ffError("avcodec_alloc_frame() == NULL",
+                          ffError::ERROR_ALLOC_ERROR);
 
         ffAVPacket    tempPacket;
         int         got_picture = -1;
@@ -237,7 +238,8 @@ void ffSequence::openFile(char *filename)
         onProgressStart();
         // Primary loop to iterate over the frames, allocate our ffRawFrames,
         // and push them into the vector storage.
-        while (retValue = av_read_frame(m_pFormatCtx, &tempPacket), retValue == 0)
+        while (retValue = av_read_frame(m_pFormatCtx, &tempPacket),
+               retValue == 0)
         {
             if (tempPacket.stream_index == m_stream)
             {
@@ -258,9 +260,11 @@ void ffSequence::openFile(char *filename)
 
         // got_picture above will return 0 for every bi-directionally encoded
         // frame. We must flush the frames out that remain internally buffered.
-        while (retValue = avcodec_decode_video2(m_pCodecCtx, pTempFrame, &got_picture,
-                    &tempPacket), ((retValue != AVERROR_EOF) && (retValue >= 0) &&
-                    (got_picture)))
+        while (retValue =
+               avcodec_decode_video2(m_pCodecCtx, pTempFrame,
+                                     &got_picture, &tempPacket),
+               ((retValue != AVERROR_EOF) && (retValue >= 0) &&
+                (got_picture)))
             pushRawFrame(pTempFrame);
 
         av_free_packet(&tempPacket);
@@ -270,7 +274,7 @@ void ffSequence::openFile(char *filename)
 
         // Only if we make it this far is the ffSequence object valid.
         m_state = isValid;
-        fileURI = filename;
+        m_fileURI = fileName;
         setCurrentFrame(FF_FIRST_FRAME);
     }
     catch(ffmpegError ffmpegErr)
@@ -281,6 +285,28 @@ void ffSequence::openFile(char *filename)
     catch(ffError ffErr)
     {
         cleanup();
+        throw;
+    }
+}
+
+void ffSequence::writeFile(char *fileName, long start, long end)
+{
+    try
+    {
+        ImageOutput *imageOutput = ImageOutput::create (fileName);
+        if (imageOutput == NULL)
+            throw ffError("imageOutput == NULL", ffError::ERROR_BAD_FILENAME);
+        ImageSpec imageSpec(m_lumaSize.m_width, m_lumaSize.m_height,
+                            1, TypeDesc::UINT8);
+
+        imageOutput->open(fileName, imageSpec);
+        imageOutput->write_image(TypeDesc::UINT8,
+                                 getRawFrame(getCurrentFrame())->m_pY);
+        imageOutput->close();
+        delete imageOutput;
+    }
+    catch (ffError eff)
+    {
         throw;
     }
 }
@@ -330,9 +356,9 @@ ffSequence::ffSequenceState ffSequence::getState(void)
     return m_state;
 }
 
-std::string ffSequence::getFilename(void)
+std::string ffSequence::getFileURI(void)
 {
-    return fileURI;
+    return m_fileURI;
 }
 
 void ffSequence::onProgressStart(void)

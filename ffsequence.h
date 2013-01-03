@@ -16,23 +16,22 @@ extern "C"
 #include <stdexcept>
 #include <vector>
 
+#include "OpenImageIO/imageio.h"
+OIIO_NAMESPACE_USING
+
 // The following correspond to the data channels. Defined here for readability.
 #define FF_Y                                                0
 #define FF_CB                                               1
 #define FF_CR                                               2
 #define FF_COMBINED                                         3
 
+#define FF_TOTAL_CHANNELS                                   3
+
 #define FF_FIRST_FRAME                                      1
 #define FF_NO_FRAME                                        -1
 #define FF_NO_STREAM                                       -1
 #define FF_NO_DIMENSION                                    -1
 
-// Custom error codes generated from within this library.
-#define FFERROR_NO_VIDEO_STREAM                             100
-#define FFERROR_BAD_FORMAT                                  101
-#define FFERROR_NO_DECODER                                  102
-#define FFERROR_ALLOC_ERROR                                 103
-#define FFERROR_BAD_FILENAME                                104
 
 class ffInterpolator
 {
@@ -51,6 +50,17 @@ public:
 
 class ffError : public std::runtime_error
 {
+public:
+    enum FFError
+    {
+        ERROR_NO_VIDEO_STREAM,
+        ERROR_BAD_FORMAT,
+        ERROR_NO_DECODER,
+        ERROR_ALLOC_ERROR,
+        ERROR_BAD_FILENAME,
+        ERROR_NULL_FILENAME
+    };
+
 private:
     int                                 m_ffError;
 public:
@@ -141,7 +151,7 @@ private:
     std::vector<ffRawFrameFloat*>           m_framesFloat;
     ffSequenceState                         m_state;
 
-    std::string                             fileURI;
+    std::string                             m_fileURI;
 
     void initialize(void);
     void pushRawFrame(AVFrame*);
@@ -151,7 +161,8 @@ public:
     ffSequence(void);
     ~ffSequence();
 
-    void openFile(char*);
+    void readFile(char *fileName);
+    void writeFile(char *, long, long);
     void closeFile(void);
 
     ffRawFrame* getRawFrame(long);
@@ -161,7 +172,7 @@ public:
     ffSize getLumaSize(void);
     ffSize getChromaSize(void);
     ffSequenceState getState(void);
-    std::string getFilename(void);
+    std::string getFileURI(void);
 
     virtual void onProgressStart(void);
     virtual void onProgress(double);

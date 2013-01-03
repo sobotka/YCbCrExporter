@@ -6,7 +6,7 @@
 #include <stdio.h>
 
 QTextPill::QTextPill(QGraphicsItem *parent) :
-    QGraphicsItem(parent),
+    QGraphicsWidget(parent),
     m_colorFill(DEFAULT_FILLCOLOR), m_colorText(DEFAULT_TEXTCOLOR), m_text(""),
     m_pEffect(NULL), m_pPropertyAnimation(NULL)
 {

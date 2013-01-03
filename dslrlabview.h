@@ -1,19 +1,8 @@
 #ifndef DSLRLABVIEW_H
 #define DSLRLABVIEW_H
 
-#include <QGraphicsView>
-#include <QGraphicsRectItem>
-#include <QGraphicsOpacityEffect>
-#include <QPropertyAnimation>
-#include <QVBoxLayout>
-#include <QTimeLine>
-#include <QApplication>
-#include <QProgressBar>
-#include <QGraphicsGridLayout>
-#include <QGraphicsWidget>
-#include <QGraphicsProxyWidget>
-#include <QGraphicsLinearLayout>
-#include <QVBoxLayout>
+#include <QtGui>
+#include <exception>
 
 #include "textpill.h"
 #include "ffsequence.h"
@@ -42,7 +31,7 @@
 #define TEXT_PADDING_X                          DEFAULT_PADDING
 #define TEXT_PADDING_Y                          DEFAULT_PADDING
 
-#define MAXIMUM_SCALE                           10.00
+#define MAXIMUM_SCALE                           24.00
 #define MINIMUM_SCALE                           0.250
 
 class progressffSequence : public QObject, public ffSequence
@@ -65,13 +54,23 @@ public:
 
 class QBaseGraphicsView : public QGraphicsView
 {
-public:
-    explicit QBaseGraphicsView(QWidget *parent = 0);
+    Q_OBJECT
 private:
-    void mouseMoveEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void mousePressEvent(QMouseEvent *event);
-    void wheelEvent(QWheelEvent *event);
+    QBaseGraphicsView                      *m_pPeer;
+    QHash<QGraphicsItem *, bool>           m_Actives;
+public:
+    explicit QBaseGraphicsView(QWidget *parent = 0,
+                               QBaseGraphicsView *pPeer = NULL);
+
+    void enterEvent(QEvent *);
+    void mouseMoveEvent(QMouseEvent *);
+    void mouseReleaseEvent(QMouseEvent *);
+    void mousePressEvent(QMouseEvent *);
+    void wheelEvent(QWheelEvent *);
+    QHash<QGraphicsItem *, bool>::iterator addActive(QGraphicsItem *);
+
+    bool eventFilter(QObject *, QEvent *);
+
 };
 
 class DSLRLabView : public QWidget
@@ -88,12 +87,14 @@ public:
     void fitToView(void);
 
     long getTotalFrames(void);
+    QString getFileURI(void);
 
     ffRawFrame::PlaneType getDisplayPlane(void);
     void setDisplayPlane(ffRawFrame::PlaneType);
 
     ffSequence::ffSequenceState getState(void);
-    void openSequence(char*);
+    void openSequence(char *);
+    void saveSequence(char *, long, long);
     void closeSequence(void);
 
     QGraphicsPixmapItem* getGraphicsPixmapItem(void);
@@ -119,8 +120,10 @@ public slots:
     void onProgressAnimation(qreal);
 
 private:
+    QGraphicsAnchorLayout                  *m_pGraphicsAnchorLayout;
     QBaseGraphicsView                      *m_pGraphicsView;
     QBaseGraphicsView                      *m_pGraphicsViewOverlay;
+    QGraphicsWidget                        *m_pOverlayAnchor;
 
     QGraphicsScene                         *m_pGraphicsScene;
     QGraphicsScene                         *m_pGraphicsSceneOverlay;
@@ -141,6 +144,8 @@ private:
     QProgressBar                           *m_pProgressBar;
     QGraphicsWidget                        *m_pgwProgressBar;
     QTextPill                              *m_pTextPill;
+    QSlider                                *m_pSlider;
+    QGraphicsWidget                        *m_pgwSlider;
 
     ffRawFrame::PlaneType                   m_displayPlane;
 
@@ -152,8 +157,12 @@ private:
 
     void initObjects(void);
 
-    virtual void wheelEvent(QWheelEvent* event);
-    virtual void resizeEvent(QResizeEvent* event);
+    void wheelEvent(QWheelEvent *);
+    void resizeEvent(QResizeEvent *);
+
+    void mouseReleaseEvent(QMouseEvent *);
+    void mousePressEvent(QMouseEvent *);
+    void mouseMoveEvent(QMouseEvent *);
 };
 
 #endif // DSLRLABVIEW_H

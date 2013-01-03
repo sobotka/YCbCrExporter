@@ -56,7 +56,6 @@ MainWindow::MainWindow(QWidget *parent) :
     createMenus();
 
     updateUI(m_pDSLRLabView->getState());
-    LOG_MSG("Logging started...");
 }
 
 MainWindow::~MainWindow()
@@ -74,12 +73,12 @@ void MainWindow::openFile(void)
         QFileDialog::Options    options;
         QString                 selectedFilter;
         QString                 fileName =
-                QFileDialog::getOpenFileName(this,
-                                             tr("QFileDialog::getOpenFileName()"),
-                                             this->windowTitle(),
-                                             tr("MOV Files (*.MOV);;All Files (*)"),
-                                             &selectedFilter,
-                                             options);
+            QFileDialog::getOpenFileName(this,
+                                         tr("QFileDialog::getOpenFileName()"),
+                                         this->windowTitle(),
+                                         tr("MOV Files (*.MOV);;All Files (*)"),
+                                         &selectedFilter,
+                                         options);
         if (!fileName.isNull())
         {
             m_workerThread = QtConcurrent::run(this,
@@ -89,45 +88,80 @@ void MainWindow::openFile(void)
     }
 }
 
+void MainWindow::exportFile(void)
+{
+    if (!m_workerThread.isRunning())
+    {
+        QFileDialog::Options    options;
+        QString                 selectedFilter;
+        QFileInfo               fileInfo(m_pDSLRLabView->getFileURI());
+
+        QString                 fileName =
+            QFileDialog::getSaveFileName(this,
+                                         tr("QFileDialog::getSaveFileName()"),
+                                         fileInfo.baseName(),
+                                         tr("All Files (*);;JPEG Files (*.JPG)"
+                                            ";;OpenEXR Files(*.EXR)"),
+                                         &selectedFilter,
+                                         options);
+        if (!fileName.isNull())
+        {
+            long start, end;
+            m_workerThread = QtConcurrent::run(this,
+                                               &MainWindow::actionExport,
+                                               fileName, start, end);
+        }
+    }
+}
+
 void MainWindow::updateUI(ffSequence::ffSequenceState state)
 {
     switch (state)
     {
     case (ffSequence::isValid):
-        connect(m_pSlider, SIGNAL(valueChanged(int)), this,
-                SLOT(actionFrameChange(int)));
+        //////////////////////connect(m_pSlider, SIGNAL(valueChanged(int)), this,
+        //////////////////////        SLOT(actionFrameChange(int)));
         m_pViewActionGroup->setEnabled(true);
+        m_pActionFileOpen->setEnabled(true);
+        m_pActionFileSave->setEnabled(true);
+        /**********************
         m_pSlider->setMinimum(FF_FIRST_FRAME);
         m_pSlider->setMaximum(m_pDSLRLabView->getTotalFrames());
         m_pSlider->setValue(FF_FIRST_FRAME);
         m_pSlider->setEnabled(true);
-        m_pMenuView->setEnabled(true);
-        m_pActionFileOpen->setEnabled(true);
         m_pSlider->show();
+        ***********************/
+        m_pMenuView->setEnabled(true);
         break;
     case (ffSequence::isInvalid):
-        disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
-                   SLOT(actionFrameChange(int)));
+        ////////////////////////////disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
+        ////////////////////////////           SLOT(actionFrameChange(int)));
         m_pViewActionGroup->setDisabled(true);
+        m_pActionFileOpen->setEnabled(true);
+        m_pActionFileSave->setDisabled(true);
+        /**********************
         m_pSlider->setMinimum(0);
         m_pSlider->setValue(0);
         m_pSlider->setMaximum(0);
         m_pSlider->setEnabled(false);
-        m_pMenuView->setEnabled(false);
-        m_pActionFileOpen->setEnabled(true);
         m_pSlider->hide();
+        ***********************/
+        m_pMenuView->setEnabled(false);
         break;
     case (ffSequence::isLoading):
-        disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
-                   SLOT(actionFrameChange(int)));
+        ///////////////////////////////disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
+        ///////////////////////////////           SLOT(actionFrameChange(int)));
         m_pViewActionGroup->setDisabled(true);
+        m_pActionFileOpen->setDisabled(true);
+        m_pActionFileSave->setDisabled(true);
+        /**********************
         m_pSlider->setMinimum(0);
         m_pSlider->setValue(0);
         m_pSlider->setMaximum(0);
         m_pSlider->setEnabled(false);
-        m_pMenuView->setEnabled(false);
-        m_pActionFileOpen->setEnabled(false);
         m_pSlider->hide();
+        ***********************/
+        m_pMenuView->setEnabled(false);
         break;
     }
 }
@@ -136,22 +170,27 @@ void MainWindow::createObjects(void)
 {
     // Provide an empty anchoring widget to anchor the QVBoxLayout.
     m_pMainAnchorWidget = new QWidget;
-    m_pSidebarAnchorWidget = new QWidget;
+    m_pMainAnchorWidget->setStyleSheet("background:lightGray");
 
-    m_pDisplayPlaneLabel = new QLabel(tr("Display Plane:"));
+    m_pOutputOptionsAnchor = new QWidget;
+    m_pDisplayOptionsAnchor = new QWidget;
+
+    m_pDisplayPlaneLabel = new QLabel(tr("Viewer Planes:"));
     m_pDisplayPlaneCombo = new QComboBox;
 
     // Main top to bottom layout.
     m_pVBoxLayout = new QVBoxLayout;
 
     // Sidebar top to bottom layout.
-    m_pSidebarLayout = new QVBoxLayout;
-    m_pPlainTextEdit = new QPlainTextEdit;
+    m_pOutputOptionsLayout = new QFormLayout;
+    m_pDisplayOptionsLayout = new QBoxLayout(QBoxLayout::TopToBottom);
 
-    m_pVSplitter = new QSplitter(Qt::Horizontal);
+    m_pSplitter = new QSplitter(Qt::Horizontal);
+    m_pSidebarToolBox = new QToolBox;
+
     m_pDSLRLabView = new DSLRLabView;
 
-    m_pSlider = new QSlider(Qt::Horizontal);
+    /////////////////////////////////////////m_pSlider = new QSlider(Qt::Horizontal);
 }
 
 void MainWindow::initObjects(void)
@@ -167,34 +206,41 @@ void MainWindow::initObjects(void)
     setCentralWidget(m_pMainAnchorWidget);
     centralWidget()->setLayout(m_pVBoxLayout);
 
+    initSidebar();
+    m_pSplitter->addWidget(m_pSidebarToolBox);
+    m_pSplitter->addWidget(m_pDSLRLabView);
+
+    //Establish the scaling ratios initially.
+    m_pSplitter->setStretchFactor(m_pSplitter->indexOf(m_pSidebarToolBox),
+                                   DSLRLAB_SIDEBAR_RATIO);
+    m_pSplitter->setStretchFactor(m_pSplitter->indexOf(m_pDSLRLabView),
+                                   DSLRLAB_PRIMARYVIEW_RATIO);
+
+    m_pVBoxLayout->addWidget(m_pSplitter);
+    ////////////////////////////////////////////////m_pVBoxLayout->addWidget(m_pSlider);
+}
+
+void MainWindow::initSidebar(void)
+{
     m_pDisplayPlaneCombo->addItem(tr("Y"), ffRawFrame::Y);
     m_pDisplayPlaneCombo->addItem(tr("Cb"), ffRawFrame::Cb);
     m_pDisplayPlaneCombo->addItem(tr("Cr"), ffRawFrame::Cr);
     m_pDisplayPlaneCombo->addItem(tr("Combined"), ffRawFrame::Combined);
     m_pDisplayPlaneCombo->setCurrentIndex(m_pDSLRLabView->getDisplayPlane());
 
-    m_pSidebarAnchorWidget->setLayout(m_pSidebarLayout);
-    m_pSidebarLayout->setMargin(DSLRLAB_NOMARGIN);
-    m_pSidebarLayout->addWidget(m_pDisplayPlaneLabel);
-    m_pSidebarLayout->addWidget(m_pDisplayPlaneCombo);
-    m_pSidebarLayout->addWidget(m_pPlainTextEdit);
+    m_pOutputOptionsAnchor->setLayout(m_pOutputOptionsLayout);
+    m_pOutputOptionsLayout->setMargin(DSLRLAB_NOMARGIN);
+    m_pDisplayOptionsAnchor->setLayout(m_pDisplayOptionsLayout);
+    m_pDisplayOptionsLayout->setMargin(DSLRLAB_NOMARGIN);
 
-    m_pVSplitter->addWidget(m_pSidebarAnchorWidget);
-    m_pVSplitter->addWidget(m_pDSLRLabView);
+    m_pSidebarToolBox->addItem(m_pOutputOptionsAnchor, tr("Output"));
+    m_pSidebarToolBox->addItem(m_pDisplayOptionsAnchor, tr("Display"));
+    m_pSidebarToolBox->setCurrentIndex(1);
 
-    //Establish the scaling ratios initially.
-    m_pVSplitter->setStretchFactor(m_pVSplitter->indexOf(m_pSidebarAnchorWidget),
-                                   DSLRLAB_SIDEBAR_RATIO);
-    m_pVSplitter->setStretchFactor(m_pVSplitter->indexOf(m_pDSLRLabView),
-                                   DSLRLAB_PRIMARYVIEW_RATIO);
+    m_pDisplayOptionsLayout->addWidget(m_pDisplayPlaneCombo);
+    m_pDisplayOptionsLayout->addStretch();
 
-    m_pVBoxLayout->addWidget(m_pVSplitter);
-    m_pVBoxLayout->addWidget(m_pSlider);
-
-    QPalette tempPal = m_pPlainTextEdit->palette();
-    tempPal.setColor(QPalette::Base, tempPal.color(QPalette::Dark));
-    m_pPlainTextEdit->setPalette(tempPal);
-    m_pPlainTextEdit->setReadOnly(true);
+    m_pSidebarToolBox->setMinimumWidth(SIDEBAR_MINIMUM_WIDTH);
 }
 
 void MainWindow::createActions(void)
@@ -203,19 +249,31 @@ void MainWindow::createActions(void)
                          this, SLOT(actionFrameChange(long)));
 
     // File Menu Actions
-    m_pActionFileOpen = new QAction(tr("&Open"), this);
+
+    m_pFileActionGroup = new QActionGroup(this);
+
+    m_pActionFileOpen = new QAction(tr("&Open..."), this);
     m_pActionFileOpen->setShortcut(tr("Ctrl+o"));
     connect(m_pActionFileOpen, SIGNAL(triggered()), this,
             SLOT(actionMenuFileOpen()));
+    m_pFileActionGroup->addAction(m_pActionFileOpen);
+
+    m_pActionFileSave = new QAction(tr("&Save..."), this);
+    m_pActionFileSave->setShortcut(tr("Ctrl+s"));
+    connect(m_pActionFileSave, SIGNAL(triggered()), this,
+            SLOT(actionMenuFileSave()));
+    m_pFileActionGroup->addAction(m_pActionFileSave);
 
     m_pActionFileQuit = new QAction(tr("&Quit"), this);
     m_pActionFileQuit->setShortcut(tr("Ctrl+q"));
     connect(m_pActionFileQuit, SIGNAL(triggered()), this,
             SLOT(actionMenuFileQuit()));
 
-    m_pViewActionGroup = new QActionGroup(this);
 
     // View Menu Actions
+
+    m_pViewActionGroup = new QActionGroup(this);
+
     m_pActionViewFitToView = new QAction(tr("&Fit to View"), this);
     m_pActionViewFitToView->setShortcut(tr("`"));
     connect(m_pActionViewFitToView, SIGNAL(triggered()), this,
@@ -245,7 +303,7 @@ void MainWindow::createActions(void)
     m_pViewActionGroup->addAction(m_pActionViewZoom4x); */
 
     connect(m_pDSLRLabView, SIGNAL(signal_error(QString)), this,
-            SLOT(actionError(QString)));
+            SLOT(onError(QString)));
     connect(m_pDSLRLabView, SIGNAL(signal_sequenceNew()), this,
             SLOT(onSequenceNew()));
     connect(m_pDSLRLabView, SIGNAL(signal_sequenceClose()), this,
@@ -261,6 +319,7 @@ void MainWindow::createMenus(void)
     // File Menu
     m_pMenuFile = new QMenu(tr("&File"), this);
     m_pMenuFile->addAction(m_pActionFileOpen);
+    m_pMenuFile->addAction(m_pActionFileSave);
     m_pMenuFile->addSeparator();
     m_pMenuFile->addAction(m_pActionFileQuit);
     menuBar()->addMenu(m_pMenuFile);
@@ -286,6 +345,22 @@ void MainWindow::actionMenuFileOpen()
     catch (std::exception e)
     {
         updateUI(m_pDSLRLabView->getState());
+        throw;
+    }
+}
+
+void MainWindow::actionMenuFileSave()
+{
+    try
+    {
+        exportFile();
+    }
+    catch (ffError eff)
+    {
+        updateUI(m_pDSLRLabView->getState());
+    }
+    catch (std::exception e)
+    {
         throw;
     }
 }
@@ -357,40 +432,40 @@ void MainWindow::actionOpenFile(QString fileName)
     try
     {
         if (fileName.isNull())
-            throw ffError("fileName.isNull()", FFERROR_BAD_FILENAME);
+            throw ffError("fileName.isNull()", ffError::ERROR_NULL_FILENAME);
         m_pDSLRLabView->openSequence(fileName.toUtf8().data());
     }
     catch (ffError eff)
     {
-        /* We should never get here after the emit based refactor.
-         * leaving in place in the event that this estimation is
-         * wrong. Needs testing.
-         *
-        // To simplify our code above this call so that we can avoid many if
-        // else situations, simply rethrow the exception and take no
-        // extraordinary action when the filename is NULL, indicating a cancel.
-        if (eff.getError() == FFERROR_BAD_FILENAME)
-            throw;
-        else
-        {
-            QMessageBox msgBox(this);
-
-            QString errorMessage =
-                    tr("There was an error loading the video file specified. "
-                       "Please confirm that the file type is supported. "
-                       "Error: (") + QString(eff.what()) + ")";
-            msgBox.setText(tr("Error loading file"));
-            msgBox.setInformativeText(errorMessage);
-            msgBox.setStandardButtons(QMessageBox::Close);
-            msgBox.setIcon(QMessageBox::Critical);
-            msgBox.setWindowModality(Qt::WindowModal);
-
-            msgBox.exec();
-        } */
+        /*
+         * The only legitimate case to get here is in the instance of a
+         * null filename, at which point we simply pass on it. The other
+         * more important errors should be caught at the lower level and
+         * have an emit generated to be received by the onError handler.
+         */
     }
 }
 
-void MainWindow::actionError(QString message)
+void MainWindow::actionExport(QString fileName, long start, long end)
+{
+    try
+    {
+        if (fileName.isNull())
+            throw ffError("fileName.isNull()", ffError::ERROR_NULL_FILENAME);
+        m_pDSLRLabView->saveSequence(fileName.toUtf8().data(), start, end);
+    }
+    catch (ffError eff)
+    {
+        /*
+         * The only legitimate case to get here is in the instance of a
+         * null filename, at which point we simply pass on it. The other
+         * more important errors should be caught at the lower level and
+         * have an emit generated to be received by the onError handler.
+         */
+    }
+}
+
+void MainWindow::onError(QString message)
 {
     QMessageBox msgBox(this);
 

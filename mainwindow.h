@@ -12,6 +12,8 @@
 #define DSLRLAB_PRIMARYVIEW_RATIO           5
 #define DSLRLAB_NOMARGIN                    0
 
+#define SIDEBAR_MINIMUM_WIDTH               DSLRLAB_DEFAULT_WIDTH/5
+
 #define LOGGING_ON                          true
 
 #ifdef LOGGING_ON
@@ -49,6 +51,7 @@ public:
 
 private slots:
     void actionMenuFileOpen();
+    void actionMenuFileSave();
     void actionMenuFileQuit();
     void actionMenuViewFitToView();
     void actionMenuViewZoom1x();
@@ -65,27 +68,33 @@ private slots:
     void onDisplayPlaneChange(int);
 
     void actionOpenFile(QString);
+    void actionExport(QString, long, long);
 
-    void actionError(QString);
+    void onError(QString);
 private:
     // Layouts
     QVBoxLayout                            *m_pVBoxLayout;
-    QVBoxLayout                            *m_pSidebarLayout;
+    QFormLayout                            *m_pOutputOptionsLayout;
+    QBoxLayout                            *m_pDisplayOptionsLayout;
+
     // Widgets
     QWidget                                *m_pMainAnchorWidget;
-    QWidget                                *m_pUpperAnchorWidget;
-    QWidget                                *m_pSidebarAnchorWidget;
+    QWidget                                *m_pOutputOptionsAnchor;
+    QWidget                                *m_pDisplayOptionsAnchor;
+
     QLabel                                 *m_pDisplayPlaneLabel;
     QComboBox                              *m_pDisplayPlaneCombo;
-    QPlainTextEdit                         *m_pPlainTextEdit;
     DSLRLabView                            *m_pDSLRLabView;
-    QSlider                                *m_pSlider;
-    QSplitter                              *m_pVSplitter;
+    /////////////////////////////////////QSlider                                *m_pSlider;
+    QSplitter                              *m_pSplitter;
+    QToolBox                               *m_pSidebarToolBox;
 
     // Actions
     QActionGroup                           *m_pViewActionGroup;
+    QActionGroup                           *m_pFileActionGroup;
 
     QAction                                *m_pActionFileOpen;
+    QAction                                *m_pActionFileSave;
     QAction                                *m_pActionFileQuit;
     QAction                                *m_pActionViewFitToView;
     QAction                                *m_pActionViewZoom1x;
@@ -102,8 +111,10 @@ private:
     QFuture<void>                           m_workerThread;
 
     void openFile(void);
+    void exportFile(void);
     void createObjects(void);
     void initObjects(void);
+    void initSidebar(void);
     void createActions(void);
     void createMenus(void);
     void updateUI(ffSequence::ffSequenceState);

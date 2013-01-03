@@ -1,9 +1,5 @@
 #include "dslrlabview.h"
 
-#include <QtGui>
-
-#include <exception>
-
 // *******
 // * progressffSequence
 // *******
@@ -25,15 +21,25 @@ void progressffSequence::onProgressEnd(void)
 // *******
 // * QBaseGraphicsView
 // *******
-QBaseGraphicsView::QBaseGraphicsView(QWidget *parent) : QGraphicsView(parent)
+QBaseGraphicsView::QBaseGraphicsView(QWidget *parent,
+                                     QBaseGraphicsView *pPeer)
+    : QGraphicsView(parent), m_pPeer(pPeer)
 {
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setStyleSheet("background:darkGray");
+}
+
+void QBaseGraphicsView::enterEvent(QEvent *event)
+{
+    QGraphicsView::enterEvent(event);
+    viewport()->setCursor(Qt::CrossCursor);
 }
 
 void QBaseGraphicsView::mouseReleaseEvent(QMouseEvent *event)
 {
     QGraphicsView::mouseReleaseEvent(event);
+    viewport()->setCursor(Qt::CrossCursor);
 }
 
 void QBaseGraphicsView::mouseMoveEvent(QMouseEvent *event)
@@ -44,11 +50,59 @@ void QBaseGraphicsView::mouseMoveEvent(QMouseEvent *event)
 void QBaseGraphicsView::mousePressEvent(QMouseEvent *event)
 {
     QGraphicsView::mousePressEvent(event);
+    viewport()->setCursor(Qt::CrossCursor);
 }
 
 void QBaseGraphicsView::wheelEvent(QWheelEvent *event)
 {
     event->ignore();
+}
+
+bool QBaseGraphicsView::eventFilter(QObject *target, QEvent *event)
+{
+    QMouseEvent *me = static_cast<QMouseEvent*>(event);
+    switch (event->type())
+    {
+    case QEvent::MouseButtonPress:
+        if (m_pPeer != NULL)
+        {
+            if (!m_Actives.contains(itemAt(me->pos())))
+            {
+                m_pPeer->mousePressEvent(me);
+                return true;
+            }
+        }
+        break;
+    case QEvent::MouseButtonRelease:
+        if (m_pPeer != NULL)
+        {
+            if (!m_Actives.contains(itemAt(me->pos())))
+            {
+                m_pPeer->mouseReleaseEvent(me);
+                return true;
+            }
+        }
+        break;
+    case QEvent::MouseMove:
+        if (m_pPeer != NULL)
+        {
+            if (!m_Actives.contains(itemAt(me->pos())))
+            {
+                m_pPeer->mouseMoveEvent(me);
+                return true;
+            }
+        }
+        break;
+    default:
+        break;
+    }
+    return QGraphicsView::eventFilter(target, event);
+}
+
+QHash<QGraphicsItem *, bool>::iterator
+QBaseGraphicsView::addActive(QGraphicsItem *pGI)
+{
+    return m_Actives.insert(pGI, true);
 }
 
 // *******
@@ -69,10 +123,15 @@ DSLRLabView::DSLRLabView(QWidget *parent) :
 void DSLRLabView::createObjects(void)
 {
     m_pGraphicsView = new QBaseGraphicsView(this);
-    m_pGraphicsViewOverlay = new QBaseGraphicsView(this);
+    m_pGraphicsViewOverlay = new QBaseGraphicsView(this, m_pGraphicsView);
 
     m_pGraphicsScene = new QGraphicsScene(this);
     m_pGraphicsSceneOverlay = new QGraphicsScene(this);
+
+    m_pOverlayAnchor = new QGraphicsWidget;
+    m_pGraphicsAnchorLayout = new QGraphicsAnchorLayout;
+
+    m_pSlider = new QSlider(Qt::Horizontal);
 
     m_pProgressBar = new QProgressBar;
     m_pProgressTimeline = new QTimeLine(TIMELINE_DURATION, this);
@@ -87,9 +146,6 @@ void DSLRLabView::createObjects(void)
 
 void DSLRLabView::initObjects(void)
 {
-    QApplication::setOverrideCursor(Qt::ArrowCursor);
-
-    m_pGraphicsView->setBackgroundRole(QPalette::Dark);
     m_pGraphicsView->setScene(m_pGraphicsScene);
     m_pGraphicsView->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     m_pGraphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
@@ -97,16 +153,24 @@ void DSLRLabView::initObjects(void)
     m_pGraphicsViewOverlay->setStyleSheet("background:transparent;");
     m_pGraphicsViewOverlay->setFrameShape(QFrame::NoFrame);
     m_pGraphicsViewOverlay->setScene(m_pGraphicsSceneOverlay);
-    m_pGraphicsViewOverlay->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+    m_pOverlayAnchor->setLayout(m_pGraphicsAnchorLayout);
+    m_pGraphicsSceneOverlay->addItem(m_pOverlayAnchor);
     m_pGraphicsSceneOverlay->addItem(m_pTextPill);
 
     m_pTextPill->setPos(TEXT_PADDING_X, TEXT_PADDING_Y);
 
+    m_pgwProgressBar = m_pGraphicsSceneOverlay->addWidget(m_pProgressBar);
+
     m_pProgressBar->setStyleSheet("background:transparent;");
     m_pProgressBar->setMaximumHeight(PROGRESS_HEIGHT);
     m_pProgressBar->setTextVisible(false);
-    m_pgwProgressBar = m_pGraphicsSceneOverlay->addWidget(m_pProgressBar);
     m_pgwProgressBar->setOpacity(DSLRVIEW_TRANSPARENT);
+
+    m_pgwSlider = m_pGraphicsSceneOverlay->addWidget(m_pSlider);
+    m_pgwSlider->setFlag(QGraphicsItem::ItemIgnoresTransformations);
+    m_pSlider->setStyleSheet("background:transparent;");
+    m_pGraphicsViewOverlay->addActive(m_pgwSlider);
 
     m_pGraphicsScene->addItem(m_pGraphicsPixmapItem);
 
@@ -132,6 +196,9 @@ void DSLRLabView::initObjects(void)
             SLOT(onProgressEnd()));
     connect(m_pProgressTimeline, SIGNAL(valueChanged(qreal)), this,
             SLOT(onProgressAnimation(qreal)));
+
+    m_pGraphicsViewOverlay->viewport()->installEventFilter(
+                m_pGraphicsViewOverlay);
 }
 
 void DSLRLabView::createAnimations(void)
@@ -263,7 +330,7 @@ void DSLRLabView::fitToView()
 void DSLRLabView::onSequenceNew(void)
 {
     m_pTextPill->start(tr("Loaded file ") +
-                          QString::fromStdString(m_pffSequence->getFilename()));
+                          QString::fromStdString(m_pffSequence->getFileURI()));
 
     updateCurrentFrame(m_pffSequence->getCurrentFrame());
     fitToView();
@@ -340,6 +407,11 @@ long DSLRLabView::getTotalFrames(void)
     return m_pffSequence->getTotalFrames();
 }
 
+QString DSLRLabView::getFileURI(void)
+{
+    return QString::fromStdString(m_pffSequence->getFileURI());
+}
+
 ffSequence::ffSequenceState DSLRLabView::getState(void)
 {
     return m_pffSequence->getState();
@@ -354,7 +426,7 @@ void DSLRLabView::openSequence(char *fileName)
 
         emit signal_sequenceStartOpen();
 
-        m_pffSequence->openFile(fileName);
+        m_pffSequence->readFile(fileName);
         m_pGraphicsView->setSceneRect(0, 0,
                      m_pffSequence->getLumaSize().m_width,
                      m_pffSequence->getLumaSize().m_height);
@@ -377,6 +449,20 @@ void DSLRLabView::openSequence(char *fileName)
     }
 }
 
+void DSLRLabView::saveSequence(char *fileName, long start, long end)
+{
+    try
+    {
+        m_pffSequence->writeFile(fileName, start, end);
+    }
+    catch (ffError eff)
+    {
+        QString message = tr("FFSEQUENCE: ") + QString(eff.what()) + " (" +
+                QString::number(eff.getError()) + ")";
+        emit signal_error(message);
+    }
+}
+
 void DSLRLabView::closeSequence(void)
 {
     if (getState())
@@ -384,6 +470,24 @@ void DSLRLabView::closeSequence(void)
         m_pffSequence->closeFile();
         emit signal_sequenceClose();
     }
+}
+
+void DSLRLabView::mouseReleaseEvent(QMouseEvent *event)
+{
+    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
+    event->ignore();
+}
+
+void DSLRLabView::mousePressEvent(QMouseEvent *event)
+{
+    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
+    event->ignore();
+}
+
+void DSLRLabView::mouseMoveEvent(QMouseEvent *event)
+{
+    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
+    event->ignore();
 }
 
 void DSLRLabView::wheelEvent(QWheelEvent* event)
@@ -414,5 +518,11 @@ void DSLRLabView::resizeEvent(QResizeEvent *event)
     m_pgwProgressBar->setGeometry(dest.width() / 2, dest.height() -
                                   (PROGRESS_HEIGHT / 2),
                                   dest.width(), PROGRESS_HEIGHT);
+
+    m_pgwSlider->setGeometry(0, rect.size().height() - m_pgwSlider->geometry().height(),
+                             rect.width(),
+                             m_pgwSlider->geometry().height());
+
+    m_pgwSlider->update();
     m_pgwProgressBar->update();
 }

@@ -3,106 +3,39 @@
 // *******
 // * progressffSequence
 // *******
-void progressffSequence::onProgressStart(void)
+void QffSequence::onProgressStart(void)
 {
     emit signal_progressStart();
 }
 
-void progressffSequence::onProgress(double factor)
+void QffSequence::onProgress(double factor)
 {
     emit signal_progress(factor);
 }
 
-void progressffSequence::onProgressEnd(void)
+void QffSequence::onProgressEnd(void)
 {
     emit signal_progressEnd();
 }
 
-// *******
-// * QBaseGraphicsView
-// *******
-QBaseGraphicsView::QBaseGraphicsView(QWidget *parent,
-                                     QBaseGraphicsView *pPeer)
-    : QGraphicsView(parent), m_pPeer(pPeer)
+void QffSequence::onJustLoading(void)
 {
-    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    setStyleSheet("background:darkGray");
+    emit signal_justLoading();
 }
 
-void QBaseGraphicsView::enterEvent(QEvent *event)
+void QffSequence::onJustOpened(void)
 {
-    QGraphicsView::enterEvent(event);
-    viewport()->setCursor(Qt::CrossCursor);
+    emit signal_justOpened();
 }
 
-void QBaseGraphicsView::mouseReleaseEvent(QMouseEvent *event)
+void QffSequence::onJustClosed(void)
 {
-    QGraphicsView::mouseReleaseEvent(event);
-    viewport()->setCursor(Qt::CrossCursor);
+    emit signal_justClosed();
 }
 
-void QBaseGraphicsView::mouseMoveEvent(QMouseEvent *event)
+void QffSequence::onJustErrored(void)
 {
-    QGraphicsView::mouseMoveEvent(event);
-}
-
-void QBaseGraphicsView::mousePressEvent(QMouseEvent *event)
-{
-    QGraphicsView::mousePressEvent(event);
-    viewport()->setCursor(Qt::CrossCursor);
-}
-
-void QBaseGraphicsView::wheelEvent(QWheelEvent *event)
-{
-    event->ignore();
-}
-
-bool QBaseGraphicsView::eventFilter(QObject *target, QEvent *event)
-{
-    QMouseEvent *me = static_cast<QMouseEvent*>(event);
-    switch (event->type())
-    {
-    case QEvent::MouseButtonPress:
-        if (m_pPeer != NULL)
-        {
-            if (!m_Actives.contains(itemAt(me->pos())))
-            {
-                m_pPeer->mousePressEvent(me);
-                return true;
-            }
-        }
-        break;
-    case QEvent::MouseButtonRelease:
-        if (m_pPeer != NULL)
-        {
-            if (!m_Actives.contains(itemAt(me->pos())))
-            {
-                m_pPeer->mouseReleaseEvent(me);
-                return true;
-            }
-        }
-        break;
-    case QEvent::MouseMove:
-        if (m_pPeer != NULL)
-        {
-            if (!m_Actives.contains(itemAt(me->pos())))
-            {
-                m_pPeer->mouseMoveEvent(me);
-                return true;
-            }
-        }
-        break;
-    default:
-        break;
-    }
-    return QGraphicsView::eventFilter(target, event);
-}
-
-QHash<QGraphicsItem *, bool>::iterator
-QBaseGraphicsView::addActive(QGraphicsItem *pGI)
-{
-    return m_Actives.insert(pGI, true);
+    emit signal_justErrored();
 }
 
 // *******
@@ -141,7 +74,7 @@ void DSLRLabView::createObjects(void)
 
     m_pGraphicsPixmapItem = new QGraphicsPixmapItem;
 
-    m_pffSequence = new progressffSequence;
+    m_pffSequence = new QffSequence;
 }
 
 void DSLRLabView::initObjects(void)
@@ -161,15 +94,14 @@ void DSLRLabView::initObjects(void)
     m_pTextPill->setPos(TEXT_PADDING_X, TEXT_PADDING_Y);
 
     m_pgwProgressBar = m_pGraphicsSceneOverlay->addWidget(m_pProgressBar);
-
     m_pProgressBar->setStyleSheet("background:transparent;");
     m_pProgressBar->setMaximumHeight(PROGRESS_HEIGHT);
     m_pProgressBar->setTextVisible(false);
     m_pgwProgressBar->setOpacity(DSLRVIEW_TRANSPARENT);
 
     m_pgwSlider = m_pGraphicsSceneOverlay->addWidget(m_pSlider);
-    m_pgwSlider->setFlag(QGraphicsItem::ItemIgnoresTransformations);
     m_pSlider->setStyleSheet("background:transparent;");
+    m_pgwSlider->setOpacity(DSLRVIEW_TRANSPARENT);
     m_pGraphicsViewOverlay->addActive(m_pgwSlider);
 
     m_pGraphicsScene->addItem(m_pGraphicsPixmapItem);
@@ -182,20 +114,27 @@ void DSLRLabView::initObjects(void)
     connect(m_pTimeLine, SIGNAL(valueChanged(qreal)),
             SLOT(onScaleTimeslice(qreal)));
     connect(m_pTimeLine, SIGNAL(finished()), SLOT(onScaleAnimFinished()));
-    connect(this, SIGNAL(signal_sequenceNew()), this, SLOT(onSequenceNew()));
-    connect(this, SIGNAL(signal_sequenceClose()), this,
-            SLOT(onSequenceClose()));
     connect(this, SIGNAL(signal_error(QString)), this, SLOT(onError(QString)));
-    connect(this, SIGNAL(signal_sequenceStartOpen()), this,
-            SLOT(onSequenceStartOpen()));
     connect(m_pffSequence, SIGNAL(signal_progressStart()), this,
             SLOT(onProgressStart()));
     connect(m_pffSequence, SIGNAL(signal_progress(double)), this,
             SLOT(onProgress(double)));
     connect(m_pffSequence, SIGNAL(signal_progressEnd()), this,
             SLOT(onProgressEnd()));
+    connect(m_pffSequence, SIGNAL(signal_justLoading()), this,
+            SLOT(onJustLoading()));
+    connect(m_pffSequence, SIGNAL(signal_justOpened()), this,
+            SLOT(onJustOpened()));
+    connect(m_pffSequence, SIGNAL(signal_justClosed()), this,
+            SLOT(onJustClosed()));
+    connect(m_pffSequence, SIGNAL(signal_justErrored()), this,
+            SLOT(onJustErrored()));
     connect(m_pProgressTimeline, SIGNAL(valueChanged(qreal)), this,
             SLOT(onProgressAnimation(qreal)));
+    connect(m_pSlider, SIGNAL(valueChanged(int)), this,
+            SLOT(onFrameChange(int)));
+    connect(this, SIGNAL(signal_updateUI(ffSequence::ffSequenceState)), this,
+            SLOT(onUpdateUI(ffSequence::ffSequenceState)));
 
     m_pGraphicsViewOverlay->viewport()->installEventFilter(
                 m_pGraphicsViewOverlay);
@@ -204,19 +143,24 @@ void DSLRLabView::initObjects(void)
 void DSLRLabView::createAnimations(void)
 {
     m_pFadePixmap = new QGraphicsOpacityEffect;
-
     m_pFadePixmapAnimation = new QPropertyAnimation(m_pFadePixmap, "opacity");
     m_pFadePixmapAnimation->setDuration(DSLRVIEW_DURATION_INTROFADEIN);
     m_pFadePixmapAnimation->setStartValue(DSLRVIEW_TRANSPARENT);
     m_pFadePixmapAnimation->setEndValue(DSLRVIEW_OPAQUE);
 
     m_pFadeProgressBar = new QGraphicsOpacityEffect;
-
     m_pFadeProgressBarAnimation = new QPropertyAnimation(m_pFadeProgressBar,
                                                          "opacity");
     m_pFadeProgressBarAnimation->setDuration(PROGRESS_FADE_DURATION);
     m_pFadeProgressBarAnimation->setStartValue(DSLRVIEW_TRANSPARENT);
     m_pFadeProgressBarAnimation->setEndValue(DSLRVIEW_OPAQUE);
+
+    m_pFadeFrameScrubber = new QGraphicsOpacityEffect;
+    m_pFadeFrameScrubberAnimation = new QPropertyAnimation(m_pFadeFrameScrubber,
+                                                           "opacity");
+    m_pFadeFrameScrubberAnimation->setDuration(PROGRESS_FADE_DURATION);
+    m_pFadeFrameScrubberAnimation->setStartValue(DSLRVIEW_TRANSPARENT);
+    m_pFadeFrameScrubberAnimation->setEndValue(DSLRVIEW_OPAQUE);
 }
 
 DSLRLabView::~DSLRLabView()
@@ -234,57 +178,10 @@ DSLRLabView::~DSLRLabView()
     delete m_pGraphicsScene;*/
 }
 
-QGraphicsPixmapItem* DSLRLabView::getGraphicsPixmapItem(void)
-{
-    return m_pGraphicsPixmapItem;
-}
 
-QTextPill* DSLRLabView::getTextPillItem(void)
-{
-    return m_pTextPill;
-}
-
-ffRawFrame::PlaneType DSLRLabView::getDisplayPlane(void)
-{
-    return m_displayPlane;
-}
-
-void DSLRLabView::setDisplayPlane(ffRawFrame::PlaneType planeType)
-{
-    if ((getState() == ffSequence::isValid) && (planeType != m_displayPlane))
-    {
-        m_displayPlane = planeType;
-        updateCurrentFrame(m_pffSequence->getCurrentFrame());
-        m_pGraphicsView->setSceneRect(m_pGraphicsPixmapItem->boundingRect());
-    }
-}
-
-void DSLRLabView::onScaleTimeslice(qreal)
-{
-    QTransform matrix(m_pGraphicsView->matrix());
-    qreal factor = 1.0 + qreal(_numScheduledScalings) / 500.0;
-    qreal scalefactor = matrix.m11() * factor;
-
-    if ((scalefactor >= MAXIMUM_SCALE) && (factor > 1.0))
-        scalefactor = MAXIMUM_SCALE;
-    else if ((scalefactor <= MINIMUM_SCALE) && (factor < 1.0))
-        scalefactor = MINIMUM_SCALE;
-
-    matrix.setMatrix(scalefactor, matrix.m12(), matrix.m13(),
-                     matrix.m21(), scalefactor, matrix.m23(),
-                     matrix.m31(), matrix.m32(), matrix.m33());
-
-    m_pGraphicsView->setTransform(QTransform(matrix));
-}
-
-void DSLRLabView::onScaleAnimFinished(void)
-{
-    if (_numScheduledScalings > 0)
-        _numScheduledScalings--;
-    else
-        _numScheduledScalings++;
-}
-
+/******************************************************************************
+ * Functions
+ ******************************************************************************/
 void DSLRLabView::resetTransform()
 {
     m_pGraphicsView->resetTransform();
@@ -327,80 +224,6 @@ void DSLRLabView::fitToView()
     m_pGraphicsView->fitInView(m_pGraphicsPixmapItem, Qt::KeepAspectRatio);
 }
 
-void DSLRLabView::onSequenceNew(void)
-{
-    m_pTextPill->start(tr("Loaded file ") +
-                          QString::fromStdString(m_pffSequence->getFileURI()));
-
-    updateCurrentFrame(m_pffSequence->getCurrentFrame());
-    fitToView();
-
-    m_pgwProgressBar->setGraphicsEffect(m_pFadeProgressBar);
-    m_pFadeProgressBarAnimation->setDirection(QAbstractAnimation::Backward);
-    m_pFadeProgressBarAnimation->start();
-
-    m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadePixmap);
-    m_pFadePixmapAnimation->setDirection(QAbstractAnimation::Forward);
-    m_pFadePixmapAnimation->start();
-}
-
-void DSLRLabView::onSequenceClose(void)
-{
-    m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadePixmap);
-    m_pFadePixmapAnimation->setDirection(QAbstractAnimation::Backward);
-    m_pFadePixmapAnimation->start();
-}
-
-void DSLRLabView::onError(QString)
-{
-    m_pgwProgressBar->setGraphicsEffect(m_pFadeProgressBar);
-    m_pFadeProgressBarAnimation->setDirection(QAbstractAnimation::Backward);
-    m_pFadeProgressBarAnimation->start();
-}
-
-void DSLRLabView::onSequenceStartOpen(void)
-{
-}
-
-void DSLRLabView::onProgressStart(void)
-{
-    m_pgwProgressBar->setGraphicsEffect(m_pFadeProgressBar);
-    m_pgwProgressBar->setOpacity(DSLRVIEW_OPAQUE);
-    m_pFadeProgressBarAnimation->setDirection(QAbstractAnimation::Forward);
-    m_pFadeProgressBarAnimation->start();
-    m_pProgressBar->setMinimum(0);
-    m_pProgressBar->setMaximum(PROGRESS_MAXIMUM);
-    m_pProgressBar->setValue(0);
-}
-
-void DSLRLabView::onProgress(double factor)
-{
-    _targetProgress = (factor * PROGRESS_MAXIMUM) +
-            PROGRESS_MAXIMUM * TIMELINE_PROGRESS_DELAY;
-    if (m_pProgressTimeline->state() != QTimeLine::Running)
-        m_pProgressTimeline->start();
-}
-
-void DSLRLabView::onProgressEnd(void)
-{
-    m_pgwProgressBar->setGraphicsEffect(m_pFadeProgressBar);
-    m_pFadeProgressBarAnimation->setDirection(QAbstractAnimation::Backward);
-    m_pFadeProgressBarAnimation->start();
-}
-
-void DSLRLabView::onProgressAnimation(qreal)
-{
-    if (_targetProgress >= m_pProgressBar->value())
-    {
-        int step = (((double)_targetProgress -
-                     (double)m_pProgressBar->value()) *
-                    ((double)TIMELINE_PROGRESS_UPDATE /
-                     (double)TIMELINE_DURATION)) + 1.5;
-                ;
-        m_pProgressBar->setValue(m_pProgressBar->value() + step);
-        m_pProgressBar->update();
-    }
-}
 
 long DSLRLabView::getTotalFrames(void)
 {
@@ -410,6 +233,21 @@ long DSLRLabView::getTotalFrames(void)
 QString DSLRLabView::getFileURI(void)
 {
     return QString::fromStdString(m_pffSequence->getFileURI());
+}
+
+ffRawFrame::PlaneType DSLRLabView::getDisplayPlane(void)
+{
+    return m_displayPlane;
+}
+
+void DSLRLabView::setDisplayPlane(ffRawFrame::PlaneType planeType)
+{
+    if ((getState() == ffSequence::isValid) && (planeType != m_displayPlane))
+    {
+        m_displayPlane = planeType;
+        updateCurrentFrame(m_pffSequence->getCurrentFrame());
+        m_pGraphicsView->setSceneRect(m_pGraphicsPixmapItem->boundingRect());
+    }
 }
 
 ffSequence::ffSequenceState DSLRLabView::getState(void)
@@ -424,13 +262,10 @@ void DSLRLabView::openSequence(char *fileName)
         if (getState() == ffSequence::isValid)
             closeSequence();
 
-        emit signal_sequenceStartOpen();
-
         m_pffSequence->readFile(fileName);
         m_pGraphicsView->setSceneRect(0, 0,
                      m_pffSequence->getLumaSize().m_width,
                      m_pffSequence->getLumaSize().m_height);
-        emit signal_sequenceNew();
     }
     catch (ffmpegError ffeff)
     {
@@ -465,31 +300,189 @@ void DSLRLabView::saveSequence(char *fileName, long start, long end)
 
 void DSLRLabView::closeSequence(void)
 {
-    if (getState())
-    {
+    if (getState() == ffSequence::isValid)
         m_pffSequence->closeFile();
-        emit signal_sequenceClose();
+}
+
+QffSequence * DSLRLabView::getQffSequence(void)
+{
+    return m_pffSequence;
+}
+
+QGraphicsPixmapItem* DSLRLabView::getGraphicsPixmapItem(void)
+{
+    return m_pGraphicsPixmapItem;
+}
+
+QTextPill* DSLRLabView::getTextPillItem(void)
+{
+    return m_pTextPill;
+}
+
+/******************************************************************************
+ * Slots
+ ******************************************************************************/
+void DSLRLabView::onScaleTimeslice(qreal)
+{
+    QTransform matrix(m_pGraphicsView->matrix());
+    qreal factor = 1.0 + qreal(_numScheduledScalings) / 500.0;
+    qreal scalefactor = matrix.m11() * factor;
+
+    if ((scalefactor >= MAXIMUM_SCALE) && (factor > 1.0))
+        scalefactor = MAXIMUM_SCALE;
+    else if ((scalefactor <= MINIMUM_SCALE) && (factor < 1.0))
+        scalefactor = MINIMUM_SCALE;
+
+    matrix.setMatrix(scalefactor, matrix.m12(), matrix.m13(),
+                     matrix.m21(), scalefactor, matrix.m23(),
+                     matrix.m31(), matrix.m32(), matrix.m33());
+
+    m_pGraphicsView->setTransform(QTransform(matrix));
+}
+
+void DSLRLabView::onScaleAnimFinished(void)
+{
+    if (_numScheduledScalings > 0)
+        _numScheduledScalings--;
+    else
+        _numScheduledScalings++;
+}
+
+void DSLRLabView::onError(QString)
+{
+    emit signal_updateUI(ffSequence::justErrored);
+}
+
+void DSLRLabView::onProgressStart(void)
+{
+    m_pProgressBar->setMinimum(0);
+    m_pProgressBar->setMaximum(PROGRESS_MAXIMUM);
+    m_pProgressBar->setValue(0);
+
+    m_pgwProgressBar->setGraphicsEffect(m_pFadeProgressBar);
+    m_pFadeProgressBarAnimation->setDirection(QAbstractAnimation::Forward);
+    m_pgwProgressBar->setOpacity(DSLRVIEW_OPAQUE);
+    m_pFadeProgressBarAnimation->start();
+}
+
+void DSLRLabView::onProgress(double factor)
+{
+    _targetProgress = (factor * PROGRESS_MAXIMUM) +
+            PROGRESS_MAXIMUM * TIMELINE_PROGRESS_DELAY;
+    if (m_pProgressTimeline->state() != QTimeLine::Running)
+        m_pProgressTimeline->start();
+}
+
+void DSLRLabView::onProgressEnd(void)
+{
+    m_pgwProgressBar->setGraphicsEffect(m_pFadeProgressBar);
+    m_pFadeProgressBarAnimation->setDirection(QAbstractAnimation::Backward);
+    m_pFadeProgressBarAnimation->start();
+}
+
+void DSLRLabView::onProgressAnimation(qreal)
+{
+    if (_targetProgress >= m_pProgressBar->value())
+    {
+        int step = (((double)_targetProgress -
+                     (double)m_pProgressBar->value()) *
+                    ((double)TIMELINE_PROGRESS_UPDATE /
+                     (double)TIMELINE_DURATION)) + 1.5;
+                ;
+        m_pProgressBar->setValue(m_pProgressBar->value() + step);
+        m_pProgressBar->update();
     }
 }
 
-void DSLRLabView::mouseReleaseEvent(QMouseEvent *event)
+void DSLRLabView::onJustLoading(void)
 {
-    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
-    event->ignore();
+    emit signal_updateUI(ffSequence::justLoading);
 }
 
-void DSLRLabView::mousePressEvent(QMouseEvent *event)
+void DSLRLabView::onJustOpened(void)
 {
-    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
-    event->ignore();
+    emit signal_updateUI(ffSequence::justOpened);
 }
 
-void DSLRLabView::mouseMoveEvent(QMouseEvent *event)
+void DSLRLabView::onJustClosed(void)
 {
-    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
-    event->ignore();
+    emit signal_updateUI(ffSequence::justClosed);
 }
 
+void DSLRLabView::onJustErrored(void)
+{
+    emit signal_updateUI(ffSequence::justErrored);
+}
+
+void DSLRLabView::onUpdateUI(ffSequence::ffSequenceState state)
+{
+    switch (state)
+    {
+    case (ffSequence::isValid):
+        break;
+    case (ffSequence::isInvalid):
+        disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
+                   SLOT(onFrameChange(int)));
+        m_pSlider->setEnabled(false);
+        m_pSlider->setMinimum(0);
+        m_pSlider->setValue(0);
+        m_pSlider->setMaximum(0);
+        break;
+    case (ffSequence::justLoading):
+    case (ffSequence::isLoading):
+        disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
+                   SLOT(onFrameChange(int)));
+        m_pSlider->setEnabled(false);
+        m_pSlider->setMinimum(0);
+        m_pSlider->setValue(0);
+        m_pSlider->setMaximum(0);
+        break;
+    case (ffSequence::justOpened):
+        m_pTextPill->start(tr("Loaded file ") +
+                              QString::fromStdString(m_pffSequence->getFileURI()));
+
+        updateCurrentFrame(m_pffSequence->getCurrentFrame());
+        fitToView();
+
+        connect(m_pSlider, SIGNAL(valueChanged(int)), this,
+                SLOT(onFrameChange(int)));
+        m_pSlider->setMinimum(FF_FIRST_FRAME);
+        m_pSlider->setMaximum(getTotalFrames());
+        m_pSlider->setValue(FF_FIRST_FRAME);
+        m_pSlider->setEnabled(true);
+
+        m_pgwSlider->setGraphicsEffect(m_pFadeFrameScrubber);
+        m_pFadeFrameScrubberAnimation->setDirection(QAbstractAnimation::Forward);
+        m_pgwSlider->setOpacity(DSLRVIEW_OPAQUE);
+        m_pFadeFrameScrubberAnimation->start();
+
+        m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadePixmap);
+        m_pFadePixmapAnimation->setDirection(QAbstractAnimation::Forward);
+        m_pFadePixmapAnimation->start();
+        break;
+    case (ffSequence::justErrored):
+        break;
+    case (ffSequence::justClosed):
+        m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadePixmap);
+        m_pFadePixmapAnimation->setDirection(QAbstractAnimation::Backward);
+        m_pFadePixmapAnimation->start();
+
+        m_pgwSlider->setGraphicsEffect(m_pFadeFrameScrubber);
+        m_pFadeFrameScrubberAnimation->setDirection(QAbstractAnimation::Backward);
+        m_pFadeFrameScrubberAnimation->start();
+        break;
+    }
+}
+
+void DSLRLabView::onFrameChange(int frame)
+{
+    if (getState() == ffSequence::isValid)
+        updateCurrentFrame(frame);
+}
+
+/*****************************************************************************
+ * Event Overrides
+ *****************************************************************************/
 void DSLRLabView::wheelEvent(QWheelEvent* event)
 {
     if (event->orientation() == Qt::Vertical)
@@ -525,4 +518,22 @@ void DSLRLabView::resizeEvent(QResizeEvent *event)
 
     m_pgwSlider->update();
     m_pgwProgressBar->update();
+}
+
+void DSLRLabView::mouseReleaseEvent(QMouseEvent *event)
+{
+    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
+    event->ignore();
+}
+
+void DSLRLabView::mousePressEvent(QMouseEvent *event)
+{
+    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
+    event->ignore();
+}
+
+void DSLRLabView::mouseMoveEvent(QMouseEvent *event)
+{
+    m_pGraphicsView->eventFilter(m_pGraphicsView, event);
+    event->ignore();
 }

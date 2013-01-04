@@ -1,16 +1,8 @@
 #include "mainwindow.h"
-#include "ffsequence.h"
 
-#include <QDesktopWidget>
-#include <stdexcept>
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QtCore>
-#include <QtGui>
-
-//***********************
-// * CustomApplication
-// **********************
+/******************************************************************************
+ * CustomApplication
+ ******************************************************************************/
 CustomApplication::CustomApplication(int &argc, char **argv)  :
     QApplication(argc, argv)
 {
@@ -44,9 +36,9 @@ bool CustomApplication::notify(QObject *receiver, QEvent *event)
     return false;
 }
 
-//***********************
-// * MainWindow
-// **********************
+/******************************************************************************
+ * MainWindow
+ ******************************************************************************/
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent)
 {
@@ -55,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent) :
     createActions();
     createMenus();
 
-    updateUI(m_pDSLRLabView->getState());
+    onUpdateUI(m_pDSLRLabView->getState());
 }
 
 MainWindow::~MainWindow()
@@ -82,7 +74,7 @@ void MainWindow::openFile(void)
         if (!fileName.isNull())
         {
             m_workerThread = QtConcurrent::run(this,
-                                               &MainWindow::actionOpenFile,
+                                               &MainWindow::onOpenFile,
                                                fileName);
         }
     }
@@ -108,60 +100,38 @@ void MainWindow::exportFile(void)
         {
             long start, end;
             m_workerThread = QtConcurrent::run(this,
-                                               &MainWindow::actionExport,
+                                               &MainWindow::onExport,
                                                fileName, start, end);
         }
     }
 }
 
-void MainWindow::updateUI(ffSequence::ffSequenceState state)
+void MainWindow::onUpdateUI(ffSequence::ffSequenceState state)
 {
     switch (state)
     {
     case (ffSequence::isValid):
-        //////////////////////connect(m_pSlider, SIGNAL(valueChanged(int)), this,
-        //////////////////////        SLOT(actionFrameChange(int)));
-        m_pViewActionGroup->setEnabled(true);
-        m_pActionFileOpen->setEnabled(true);
-        m_pActionFileSave->setEnabled(true);
-        /**********************
-        m_pSlider->setMinimum(FF_FIRST_FRAME);
-        m_pSlider->setMaximum(m_pDSLRLabView->getTotalFrames());
-        m_pSlider->setValue(FF_FIRST_FRAME);
-        m_pSlider->setEnabled(true);
-        m_pSlider->show();
-        ***********************/
-        m_pMenuView->setEnabled(true);
         break;
+    case (ffSequence::justClosed):
+    case (ffSequence::justErrored):
     case (ffSequence::isInvalid):
-        ////////////////////////////disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
-        ////////////////////////////           SLOT(actionFrameChange(int)));
         m_pViewActionGroup->setDisabled(true);
         m_pActionFileOpen->setEnabled(true);
         m_pActionFileSave->setDisabled(true);
-        /**********************
-        m_pSlider->setMinimum(0);
-        m_pSlider->setValue(0);
-        m_pSlider->setMaximum(0);
-        m_pSlider->setEnabled(false);
-        m_pSlider->hide();
-        ***********************/
         m_pMenuView->setEnabled(false);
         break;
     case (ffSequence::isLoading):
-        ///////////////////////////////disconnect(m_pSlider, SIGNAL(valueChanged(int)), this,
-        ///////////////////////////////           SLOT(actionFrameChange(int)));
+    case (ffSequence::justLoading):
         m_pViewActionGroup->setDisabled(true);
         m_pActionFileOpen->setDisabled(true);
         m_pActionFileSave->setDisabled(true);
-        /**********************
-        m_pSlider->setMinimum(0);
-        m_pSlider->setValue(0);
-        m_pSlider->setMaximum(0);
-        m_pSlider->setEnabled(false);
-        m_pSlider->hide();
-        ***********************/
         m_pMenuView->setEnabled(false);
+        break;
+    case (ffSequence::justOpened):
+        m_pViewActionGroup->setEnabled(true);
+        m_pActionFileOpen->setEnabled(true);
+        m_pActionFileSave->setEnabled(true);
+        m_pMenuView->setEnabled(true);
         break;
     }
 }
@@ -189,8 +159,6 @@ void MainWindow::createObjects(void)
     m_pSidebarToolBox = new QToolBox;
 
     m_pDSLRLabView = new DSLRLabView;
-
-    /////////////////////////////////////////m_pSlider = new QSlider(Qt::Horizontal);
 }
 
 void MainWindow::initObjects(void)
@@ -217,7 +185,6 @@ void MainWindow::initObjects(void)
                                    DSLRLAB_PRIMARYVIEW_RATIO);
 
     m_pVBoxLayout->addWidget(m_pSplitter);
-    ////////////////////////////////////////////////m_pVBoxLayout->addWidget(m_pSlider);
 }
 
 void MainWindow::initSidebar(void)
@@ -245,9 +212,6 @@ void MainWindow::initSidebar(void)
 
 void MainWindow::createActions(void)
 {
-    DSLRLabView::connect(m_pDSLRLabView, SIGNAL(signal_frameChanged(long)),
-                         this, SLOT(actionFrameChange(long)));
-
     // File Menu Actions
 
     m_pFileActionGroup = new QActionGroup(this);
@@ -255,20 +219,19 @@ void MainWindow::createActions(void)
     m_pActionFileOpen = new QAction(tr("&Open..."), this);
     m_pActionFileOpen->setShortcut(tr("Ctrl+o"));
     connect(m_pActionFileOpen, SIGNAL(triggered()), this,
-            SLOT(actionMenuFileOpen()));
+            SLOT(onMenuFileOpen()));
     m_pFileActionGroup->addAction(m_pActionFileOpen);
 
     m_pActionFileSave = new QAction(tr("&Save..."), this);
     m_pActionFileSave->setShortcut(tr("Ctrl+s"));
     connect(m_pActionFileSave, SIGNAL(triggered()), this,
-            SLOT(actionMenuFileSave()));
+            SLOT(onMenuFileSave()));
     m_pFileActionGroup->addAction(m_pActionFileSave);
 
     m_pActionFileQuit = new QAction(tr("&Quit"), this);
     m_pActionFileQuit->setShortcut(tr("Ctrl+q"));
     connect(m_pActionFileQuit, SIGNAL(triggered()), this,
-            SLOT(actionMenuFileQuit()));
-
+            SLOT(onMenuFileQuit()));
 
     // View Menu Actions
 
@@ -277,13 +240,13 @@ void MainWindow::createActions(void)
     m_pActionViewFitToView = new QAction(tr("&Fit to View"), this);
     m_pActionViewFitToView->setShortcut(tr("`"));
     connect(m_pActionViewFitToView, SIGNAL(triggered()), this,
-            SLOT(actionMenuViewFitToView()));
+            SLOT(onMenuViewFitToView()));
     m_pViewActionGroup->addAction(m_pActionViewFitToView);
 
     m_pActionViewZoom1x = new QAction(tr("Zoom &1x"), this);
     m_pActionViewZoom1x->setShortcut(tr("1"));
     connect(m_pActionViewZoom1x, SIGNAL(triggered()), this,
-            SLOT(actionMenuViewZoom1x()));
+            SLOT(onMenuViewZoom1x()));
     m_pViewActionGroup->addAction(m_pActionViewZoom1x);
 
     /* TODO: Need to figure out the most useful zoom keys. Originally
@@ -304,12 +267,8 @@ void MainWindow::createActions(void)
 
     connect(m_pDSLRLabView, SIGNAL(signal_error(QString)), this,
             SLOT(onError(QString)));
-    connect(m_pDSLRLabView, SIGNAL(signal_sequenceNew()), this,
-            SLOT(onSequenceNew()));
-    connect(m_pDSLRLabView, SIGNAL(signal_sequenceClose()), this,
-            SLOT(onSequenceClose()));
-    connect(m_pDSLRLabView, SIGNAL(signal_sequenceStartOpen()), this,
-            SLOT(onSequenceStartOpen()));
+    connect(m_pDSLRLabView, SIGNAL(signal_updateUI(ffSequence::ffSequenceState)), this,
+            SLOT(onUpdateUI(ffSequence::ffSequenceState)));
     connect(m_pDisplayPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
             SLOT(onDisplayPlaneChange(int)));
 }
@@ -333,10 +292,10 @@ void MainWindow::createMenus(void)
     menuBar()->addMenu(m_pMenuView);
 }
 
-/**
- * MainWindow Actions
- **/
-void MainWindow::actionMenuFileOpen()
+/******************************************************************************
+ * Event Overrides
+ ******************************************************************************/
+void MainWindow::onMenuFileOpen()
 {
     try
     {
@@ -344,12 +303,12 @@ void MainWindow::actionMenuFileOpen()
     }
     catch (std::exception e)
     {
-        updateUI(m_pDSLRLabView->getState());
+        onUpdateUI(ffSequence::justErrored);
         throw;
     }
 }
 
-void MainWindow::actionMenuFileSave()
+void MainWindow::onMenuFileSave()
 {
     try
     {
@@ -357,69 +316,40 @@ void MainWindow::actionMenuFileSave()
     }
     catch (ffError eff)
     {
-        updateUI(m_pDSLRLabView->getState());
+        onUpdateUI(ffSequence::justErrored);
     }
     catch (std::exception e)
     {
+        onUpdateUI(ffSequence::justErrored);
         throw;
     }
 }
 
-void MainWindow::actionMenuFileQuit()
+void MainWindow::onMenuFileQuit()
 {
     QApplication::exit();
 }
 
-void MainWindow::actionMenuViewFitToView()
+void MainWindow::onMenuViewFitToView()
 {
     m_pDSLRLabView->fitToView();
     m_pDSLRLabView->getTextPillItem()->start(tr("Fit to View"));
 }
 
-void MainWindow::actionMenuViewZoom1x()
+void MainWindow::onMenuViewZoom1x()
 {
     m_pDSLRLabView->resetTransform();
     m_pDSLRLabView->getTextPillItem()->start(tr("Zoom 1x"));
 }
 
-void MainWindow::actionMenuViewZoom2x()
+void MainWindow::onMenuViewZoom2x()
 {
     m_pDSLRLabView->getTextPillItem()->start(tr("Zoom 2x"));
 }
 
-void MainWindow::actionMenuViewZoom4x()
+void MainWindow::onMenuViewZoom4x()
 {
     m_pDSLRLabView->getTextPillItem()->start(tr("Zoom 4x"));
-}
-
-// Signals and slots must match 1:1 with variable declarations. Frames
-// are long by default, so we must create an additional function for
-// the int passed from the slider.
-void MainWindow::actionFrameChange(int frame)
-{
-    if (m_pDSLRLabView->getState())
-        m_pDSLRLabView->updateCurrentFrame(frame);
-}
-
-void MainWindow::actionFrameChange(long frame)
-{
-    if (m_pDSLRLabView->getState() == ffSequence::isValid)
-        m_pDSLRLabView->updateCurrentFrame(frame);
-}
-
-void MainWindow::onSequenceNew()
-{
-    updateUI(m_pDSLRLabView->getState());
-}
-
-void MainWindow::onSequenceClose()
-{
-    updateUI(m_pDSLRLabView->getState());
-}
-
-void MainWindow::onSequenceStartOpen()
-{
-    updateUI(ffSequence::isLoading);
 }
 
 void MainWindow::onDisplayPlaneChange(int plane)
@@ -427,7 +357,7 @@ void MainWindow::onDisplayPlaneChange(int plane)
     m_pDSLRLabView->setDisplayPlane((ffRawFrame::PlaneType)plane);
 }
 
-void MainWindow::actionOpenFile(QString fileName)
+void MainWindow::onOpenFile(QString fileName)
 {
     try
     {
@@ -446,7 +376,7 @@ void MainWindow::actionOpenFile(QString fileName)
     }
 }
 
-void MainWindow::actionExport(QString fileName, long start, long end)
+void MainWindow::onExport(QString fileName, long start, long end)
 {
     try
     {
@@ -481,5 +411,5 @@ void MainWindow::onError(QString message)
 
     msgBox.exec();
 
-    updateUI(m_pDSLRLabView->getState());
+    onUpdateUI(m_pDSLRLabView->getState());
 }

@@ -1,10 +1,10 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <dslrlabview.h>
-#include "ffsequence.h"
-
 #include <QtGui>
+
+#include "dslrlabview.h"
+#include "ffsequence.h"
 
 #define DSLRLAB_DEFAULT_WIDTH               1280
 #define DSLRLAB_DEFAULT_HEIGHT              720
@@ -13,14 +13,6 @@
 #define DSLRLAB_NOMARGIN                    0
 
 #define SIDEBAR_MINIMUM_WIDTH               DSLRLAB_DEFAULT_WIDTH/5
-
-#define LOGGING_ON                          true
-
-#ifdef LOGGING_ON
-#define LOG_MSG(...) m_pPlainTextEdit->appendPlainText(__VA_ARGS__)
-#else
-#define LOG_MSG(...)
-#endif
 
 class MainWindow;
 
@@ -35,7 +27,7 @@ public:
     CustomApplication(int&, char**);
     ~CustomApplication();
 
-    // reimplemented from QApplication so we can throw exceptions in slots
+    // Reimplemented from QApplication so we can throw exceptions in slots.
     virtual bool notify(QObject*, QEvent*);
 
     MainWindow              *m_pMainWindow;
@@ -50,27 +42,19 @@ public:
     ~MainWindow();
 
 private slots:
-    void actionMenuFileOpen();
-    void actionMenuFileSave();
-    void actionMenuFileQuit();
-    void actionMenuViewFitToView();
-    void actionMenuViewZoom1x();
-    void actionMenuViewZoom2x();
-    void actionMenuViewZoom4x();
-
-    void actionFrameChange(int);
-    void actionFrameChange(long);
-
-    void onSequenceNew(void);
-    void onSequenceClose(void);
-    void onSequenceStartOpen(void);
-
+    void onMenuFileOpen();
+    void onMenuFileSave();
+    void onMenuFileQuit();
+    void onMenuViewFitToView();
+    void onMenuViewZoom1x();
+    void onMenuViewZoom2x();
+    void onMenuViewZoom4x();
     void onDisplayPlaneChange(int);
-
-    void actionOpenFile(QString);
-    void actionExport(QString, long, long);
-
+    void onOpenFile(QString);
+    void onExport(QString, long, long);
     void onError(QString);
+    void onUpdateUI(ffSequence::ffSequenceState);
+
 private:
     // Layouts
     QVBoxLayout                            *m_pVBoxLayout;
@@ -85,7 +69,6 @@ private:
     QLabel                                 *m_pDisplayPlaneLabel;
     QComboBox                              *m_pDisplayPlaneCombo;
     DSLRLabView                            *m_pDSLRLabView;
-    /////////////////////////////////////QSlider                                *m_pSlider;
     QSplitter                              *m_pSplitter;
     QToolBox                               *m_pSidebarToolBox;
 
@@ -100,9 +83,7 @@ private:
     QAction                                *m_pActionViewZoom1x;
     QAction                                *m_pActionViewZoom2x;
     QAction                                *m_pActionViewZoom4x;
-    QAction                                *m_pActionFrameChange;
 
-    //QAction            *m_pSliderValueChanged;
     // Menus
     QMenu                                  *m_pMenuFile;
     QMenu                                  *m_pMenuView;
@@ -117,7 +98,6 @@ private:
     void initSidebar(void);
     void createActions(void);
     void createMenus(void);
-    void updateUI(ffSequence::ffSequenceState);
 };
 
 #endif // MAINWINDOW_H

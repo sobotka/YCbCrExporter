@@ -178,6 +178,7 @@ void ffSequence::readFile(char *fileName)
     {
         cleanup();
         m_state = isLoading;
+        onJustLoading();
 
         int retValue = -1;
 
@@ -276,15 +277,19 @@ void ffSequence::readFile(char *fileName)
         m_state = isValid;
         m_fileURI = fileName;
         setCurrentFrame(FF_FIRST_FRAME);
+        onProgressEnd();
+        onJustOpened();
     }
     catch(ffmpegError ffmpegErr)
     {
         cleanup();
+        onJustErrored();
         throw;
     }
     catch(ffError ffErr)
     {
         cleanup();
+        onJustErrored();
         throw;
     }
 }
@@ -307,6 +312,7 @@ void ffSequence::writeFile(char *fileName, long start, long end)
     }
     catch (ffError eff)
     {
+        onJustErrored();
         throw;
     }
 }
@@ -314,6 +320,7 @@ void ffSequence::writeFile(char *fileName, long start, long end)
 void ffSequence::closeFile(void)
 {
     cleanup();
+    onJustClosed();
 }
 
 ffRawFrame* ffSequence::getRawFrame(long frame)
@@ -363,15 +370,35 @@ std::string ffSequence::getFileURI(void)
 
 void ffSequence::onProgressStart(void)
 {
-
+    // Pass
 }
 
 void ffSequence::onProgress(double)
 {
-
+    // Pass
 }
 
 void ffSequence::onProgressEnd(void)
 {
+    // Pass
+}
 
+void ffSequence::onJustLoading(void)
+{
+    // Pass
+}
+
+void ffSequence::onJustOpened(void)
+{
+    // Pass
+}
+
+void ffSequence::onJustClosed(void)
+{
+    // Pass
+}
+
+void ffSequence::onJustErrored(void)
+{
+    // Pass
 }

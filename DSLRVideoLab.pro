@@ -16,12 +16,14 @@ SOURCES += main.cpp\
         mainwindow.cpp \
     dslrlabview.cpp \
     ffsequence.cpp \
-    textpill.cpp
+    textpill.cpp \
+    qbasegraphicsview.cpp
 
 HEADERS  += mainwindow.h \
     dslrlabview.h \
     ffsequence.h \
-    textpill.h
+    textpill.h \
+    qbasegraphicsview.h
 
 unix|win32: LIBS += -lavformat
 

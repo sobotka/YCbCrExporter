@@ -20,14 +20,15 @@ extern "C"
 OIIO_NAMESPACE_USING
 
 // The following correspond to the data channels. Defined here for readability.
+// Do not change these values as they are used in indexing fixed memory
+// arrays.
 #define FF_Y                                                0
 #define FF_CB                                               1
 #define FF_CR                                               2
 #define FF_COMBINED                                         3
 
-#define FF_TOTAL_CHANNELS                                   3
-
 #define FF_FIRST_FRAME                                      1
+
 #define FF_NO_FRAME                                        -1
 #define FF_NO_STREAM                                       -1
 #define FF_NO_DIMENSION                                    -1
@@ -132,7 +133,11 @@ public:
     {
         isLoading,
         isValid,
-        isInvalid
+        isInvalid,
+        justLoading,
+        justOpened,
+        justClosed,
+        justErrored
     };
 
 private:
@@ -174,8 +179,14 @@ public:
     ffSequenceState getState(void);
     std::string getFileURI(void);
 
+    // The following virtual functions are provided for GUI applications to
+    // provide a simple way to keep the UI in synchronicity with the object.
     virtual void onProgressStart(void);
     virtual void onProgress(double);
     virtual void onProgressEnd(void);
+    virtual void onJustLoading(void);
+    virtual void onJustOpened(void);
+    virtual void onJustClosed(void);
+    virtual void onJustErrored(void);
 };
 #endif // FFSEQUENCE_H

@@ -6,6 +6,7 @@
 
 #include "textpill.h"
 #include "ffsequence.h"
+#include "qbasegraphicsview.h"
 
 #define DSLRVIEW_SCALE_INCREMENT                10
 // Default speed of scaling for zooming in and out.
@@ -13,7 +14,8 @@
 #define DSLRVIEW_OVERLAY_MARGIN                 80
 // Animations and Transitions
 #define DSLRVIEW_DURATION_INTROFADEIN           250
-#define DSLRVIEW_DURATION_TEXTFADEOUT           3000
+
+#define INITANIM                                10
 
 #define PROGRESS_FADE_DURATION                  1000
 #define PROGRESS_HEIGHT                         6
@@ -34,7 +36,7 @@
 #define MAXIMUM_SCALE                           24.00
 #define MINIMUM_SCALE                           0.250
 
-class progressffSequence : public QObject, public ffSequence
+class QffSequence : public QObject, public ffSequence
 {
     Q_OBJECT
 
@@ -42,35 +44,23 @@ signals:
     void signal_progressStart(void);
     void signal_progress(double);
     void signal_progressEnd(void);
+    void signal_justLoading(void);
+    void signal_justOpened(void);
+    void signal_justClosed(void);
+    void signal_justErrored(void);
 
 private:
     void onProgressStart(void);
     void onProgress(double);
     void onProgressEnd(void);
+    void onJustLoading(void);
+    void onJustOpened(void);
+    void onJustClosed(void);
+    void onJustErrored(void);
+
 public:
-    explicit progressffSequence(QWidget *parent = 0) :
+    explicit QffSequence(QWidget *parent = 0) :
         QObject(parent), ffSequence() {}
-};
-
-class QBaseGraphicsView : public QGraphicsView
-{
-    Q_OBJECT
-private:
-    QBaseGraphicsView                      *m_pPeer;
-    QHash<QGraphicsItem *, bool>           m_Actives;
-public:
-    explicit QBaseGraphicsView(QWidget *parent = 0,
-                               QBaseGraphicsView *pPeer = NULL);
-
-    void enterEvent(QEvent *);
-    void mouseMoveEvent(QMouseEvent *);
-    void mouseReleaseEvent(QMouseEvent *);
-    void mousePressEvent(QMouseEvent *);
-    void wheelEvent(QWheelEvent *);
-    QHash<QGraphicsItem *, bool>::iterator addActive(QGraphicsItem *);
-
-    bool eventFilter(QObject *, QEvent *);
-
 };
 
 class DSLRLabView : public QWidget
@@ -81,7 +71,6 @@ public:
     explicit DSLRLabView(QWidget *parent = 0);
     ~DSLRLabView();
 
-    void setScale(float, QPoint);
     void resetTransform(void);
     void updateCurrentFrame(long);
     void fitToView(void);
@@ -96,28 +85,30 @@ public:
     void openSequence(char *);
     void saveSequence(char *, long, long);
     void closeSequence(void);
+    QffSequence * getQffSequence(void);
 
     QGraphicsPixmapItem* getGraphicsPixmapItem(void);
     QTextPill* getTextPillItem(void);
 
 signals:
-    void signal_sequenceStartOpen(void);
-    void signal_sequenceClose(void);
-    void signal_sequenceNew(void);
     void signal_frameChanged(long);
     void signal_error(QString);
+    void signal_updateUI(ffSequence::ffSequenceState);
 
 public slots:
     void onScaleTimeslice(qreal x);
     void onScaleAnimFinished(void);
-    void onSequenceNew(void);
-    void onSequenceClose(void);
-    void onSequenceStartOpen(void);
     void onError(QString);
     void onProgressStart(void);
     void onProgress(double);
     void onProgressEnd(void);
     void onProgressAnimation(qreal);
+    void onJustLoading(void);
+    void onJustOpened(void);
+    void onJustClosed(void);
+    void onJustErrored(void);
+    void onUpdateUI(ffSequence::ffSequenceState);
+    void onFrameChange(int);
 
 private:
     QGraphicsAnchorLayout                  *m_pGraphicsAnchorLayout;
@@ -130,7 +121,7 @@ private:
 
     QGraphicsPixmapItem                    *m_pGraphicsPixmapItem;
 
-    progressffSequence                     *m_pffSequence;
+    QffSequence                     *m_pffSequence;
 
     QTimeLine                              *m_pTimeLine;
 
@@ -139,6 +130,10 @@ private:
 
     QGraphicsOpacityEffect                 *m_pFadeProgressBar;
     QPropertyAnimation                     *m_pFadeProgressBarAnimation;
+
+    QGraphicsOpacityEffect                 *m_pFadeFrameScrubber;
+    QPropertyAnimation                     *m_pFadeFrameScrubberAnimation;
+
     QTimeLine                              *m_pProgressTimeline;
 
     QProgressBar                           *m_pProgressBar;

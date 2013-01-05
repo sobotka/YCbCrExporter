@@ -10,30 +10,23 @@ After manipulating the raw Y'Cb'Cr' sources to an artist's liking, the applicati
 
 == Techniques ==
 Leverage several useful techniques to improve the quality of the Y'Cb'Cr' based footage.
-[LI]
-[*] Improved scaling of Cb' Cr' planes. In most instances, scaling of the Cb' and Cr' based planes is sub-optimal in quality due to the traditional need of playback-only viewing. This approach will leverage a best-in-breed approach known as cubic b spline with prefilter for optimal perceptual sharpness.
-[*] Linearization of footage sources. Sources in Y'Cb'Cr based footage is stored in non-linear color space models. Linearizing the footage provides reduces many optical errors in footage.
-[*] Improved color transformations. Precise control over color transformations is planned to provide greatest artist flexibility.
-[*] Out of gamut clipped values retained via use of floating point output and wide color space models.
-[*] Chroma reconstruction based on spill / binning techniques. Chroma scaling is destructive, but with some processing, some of the chroma can be reconstructed based on resultant out of gamut values.
-[/LI]
+
+* Improved scaling of Cb' Cr' planes. In most instances, scaling of the Cb' and Cr' based planes is sub-optimal in quality due to the traditional need of playback-only viewing. This approach will leverage a best-in-breed approach known as cubic b spline with prefilter for optimal perceptual sharpness.
+* Linearization of footage sources. Sources in Y'Cb'Cr based footage is stored in non-linear color space models. Linearizing the footage provides reduces many optical errors in footage.
+* Improved color transformations. Precise control over color transformations is planned to provide greatest artist flexibility.
+* Out of gamut clipped values retained via use of floating point output and wide color space models.
+* Chroma reconstruction based on spill / binning techniques. Chroma scaling is destructive, but with some processing, some of the chroma can be reconstructed based on resultant out of gamut values.
 
 == Current State ==
-[LI]
-[*] Load bitwise exact raw Y'Cb'Cr' planes from 4:2:0 sources, unscaled.
-[*] Saves the first Y' plane in the series.
-[/LI]
+* Load bitwise exact raw Y'Cb'Cr' planes from 4:2:0 sources, unscaled.
+* Saves the first Y' plane in the series.
 
 == Near Targets ==
-[LI]
-[*] Export all frames to artist defined formats, unscaled.
-[*] Introduce first Y'Cb'Cr' merging to R'G'B' via nearest neighbor scaling of Cb' and Cr'.
-[/LI]
+* Export all frames to artist defined formats, unscaled.
+* Introduce first Y'Cb'Cr' merging to R'G'B' via nearest neighbor scaling of Cb' and Cr'.
 
 == Far Targets ==
-[LI]
-[*] Export ranges set on defined in and out points.
-[*] Complete scaling algorithm selection to include nearest neighbor, linear, cubic b, and cubic b with prefilter.
-[*] Integrate OpenColorIO for linearization and other color based transforms.
-[*] Add formats that are within the design scope such as support for 4:2:2 out of the Black Magic Camera.
-[/LI]
+* Export ranges set on defined in and out points.
+* Complete scaling algorithm selection to include nearest neighbor, linear, cubic b, and cubic b with prefilter.
+* Integrate OpenColorIO for linearization and other color based transforms.
+* Add formats that are within the design scope such as support for 4:2:2 out of the Black Magic Camera.

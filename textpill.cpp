@@ -8,7 +8,8 @@
 QTextPill::QTextPill(QGraphicsItem *parent) :
     QGraphicsWidget(parent),
     m_colorFill(DEFAULT_FILLCOLOR), m_colorText(DEFAULT_TEXTCOLOR), m_text(""),
-    m_pEffect(NULL), m_pPropertyAnimation(NULL)
+    m_metrics(QApplication::font()), m_rectF(), m_pEffect(NULL),
+    m_pPropertyAnimation(NULL)
 {
     createObjects();
     initObjects();
@@ -48,7 +49,8 @@ void QTextPill::init(QString text, bool inverse, int dur, qreal start, qreal end
 
 void QTextPill::start(QString text, bool inverse)
 {
-    m_pPropertyAnimation->stop();
+    if (m_pPropertyAnimation->state() == QPropertyAnimation::Running)
+        m_pPropertyAnimation->stop();
     init(text, inverse);
     setOpacity(DEFAULT_STARTVALUE);
     m_pPropertyAnimation->start();
@@ -64,6 +66,8 @@ void QTextPill::paint(QPainter *pPainter, const QStyleOptionGraphicsItem *,
     pPainter->setPen(Qt::NoPen);
     pPainter->setBrush(m_colorFill);
 
+    //prepareGeometryChange();
+
     QRectF rect = boundingRect();
 
     pPainter->drawRoundRect(rect, rect.height()/rect.width() * 100.0,
@@ -75,29 +79,26 @@ void QTextPill::paint(QPainter *pPainter, const QStyleOptionGraphicsItem *,
 
 void QTextPill::setText(QString text)
 {
-    prepareGeometryChange();
     m_text = text;
-    update();
+
+    m_rectF.setRect(0, 0,
+                    m_metrics.boundingRect(m_text).width() +
+                    WIDTHFACTOR *
+                    m_metrics.boundingRect(m_text).height(),
+                    HEIGHTFACTOR *
+                    m_metrics.boundingRect(m_text).height());
 }
 
 QRectF QTextPill::boundingRect() const
 {
-    QFontMetricsF metrics = QApplication::font();
-
-    QRectF rect(0, 0,
-                metrics.boundingRect(m_text).width() +
-                MARGIN_WIDTH_FACTOR *
-                metrics.boundingRect(m_text).height(),
-                MARGIN_HEIGHT_FACTOR *
-                metrics.boundingRect(m_text).height());
-    return rect;
+    return m_rectF;
 }
 
-/*QPainterPath TextPill::shape() const
+/* QPainterPath QTextPill::shape() const
 {
     QPainterPath path;
     QRectF rect = boundingRect();
-    path.addRoundedRect(rect, rect.height()/rect.width() * 100,
-                         100.0);
+    path.addRoundedRect(rect, rect.height()/rect.width() * 100.0,
+                                100.0);
     return path;
-}*/
+} */

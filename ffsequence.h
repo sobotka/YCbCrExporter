@@ -19,13 +19,6 @@ extern "C"
 #include "OpenImageIO/imageio.h"
 OIIO_NAMESPACE_USING
 
-// The following correspond to the data channels. Defined here for readability.
-// Do not change these values as they are used in indexing fixed memory
-// arrays.
-#define FF_Y                                                0
-#define FF_CB                                               1
-#define FF_CR                                               2
-#define FF_COMBINED                                         3
 
 #define FF_FIRST_FRAME                                      1
 
@@ -33,6 +26,15 @@ OIIO_NAMESPACE_USING
 #define FF_NO_STREAM                                       -1
 #define FF_NO_DIMENSION                                    -1
 
+class ffDefault
+{
+public:
+    enum Defaults
+    {
+        NoFrame =                                               0,
+        FirstFrame =                                            1
+    };
+};
 
 class ffInterpolator
 {
@@ -77,6 +79,13 @@ public:
         ffError(what_arg, error) {}
 };
 
+class ffTrim
+{
+private:
+    long                                    m_in;
+    long                                    m_out;
+};
+
 class ffSize
 {
 public:
@@ -98,9 +107,11 @@ class ffRawFrame
 private:
 
 public:
-    enum PlaneType
+    enum Plane
     {
-        Y = FF_Y, Cb = FF_CB, Cr = FF_CR, Combined = FF_COMBINED
+        Y =                         0,
+        Cb =                        1,
+        Cr =                        2,
     };
 
     unsigned char                  *m_pY;
@@ -110,8 +121,40 @@ public:
     ffRawFrame(AVFrame*);
     ~ffRawFrame();
 
-    void scalePlane(ffRawFrame::PlaneType, ffSize, ffSizeRatio,
+    void scalePlane(ffRawFrame::Plane, ffSize, ffSizeRatio,
                     ffInterpolator::Type);
+};
+
+class ffViewer
+{
+public:
+    enum ViewerPlane
+    {
+        Y =                                 ffRawFrame::Y,
+        Cb =                                ffRawFrame::Cb,
+        Cr =                                ffRawFrame::Cr,
+        RGB
+    };
+};
+
+class ffExportDetails
+{
+public:
+    enum ExportPlane
+    {
+        RGB =                               0,
+        YCbCr =                             1,
+        Raw =                               2
+    };
+private:
+    ffSize                                  m_targetSize;
+    ffInterpolator::Type                    m_YInterp;
+    ffInterpolator::Type                    m_CbInterp;
+    ffInterpolator::Type                    m_CrInterp;
+    ffTrim                                  m_trim;
+    ExportPlane                             m_planes;
+
+public:
 };
 
 class ffRawFrameFloat

@@ -110,28 +110,50 @@ void MainWindow::onUpdateUI(ffSequence::ffSequenceState state)
 {
     switch (state)
     {
-    case (ffSequence::isValid):
-        break;
     case (ffSequence::justClosed):
     case (ffSequence::justErrored):
     case (ffSequence::isInvalid):
         m_pViewActionGroup->setDisabled(true);
         m_pActionFileOpen->setEnabled(true);
-        m_pActionFileSave->setDisabled(true);
-        m_pMenuView->setEnabled(false);
+        m_pActionFileExport->setDisabled(true);
+        m_pMenuView->setDisabled(true);
+        m_pSBToolBox->setDisabled(true);
+        m_pSBEStartSpin->setMinimum(ffDefault::NoFrame);
+        m_pSBEStartSpin->setValue(ffDefault::NoFrame);
+        m_pSBEStartSpin->setMaximum(ffDefault::NoFrame);
+        m_pSBEEndSpin->setMinimum(ffDefault::NoFrame);
+        m_pSBEEndSpin->setValue(ffDefault::NoFrame);
+        m_pSBEEndSpin->setMaximum(ffDefault::NoFrame);
+        m_pSBToolBox->setEnabled(false);
         break;
     case (ffSequence::isLoading):
     case (ffSequence::justLoading):
         m_pViewActionGroup->setDisabled(true);
         m_pActionFileOpen->setDisabled(true);
-        m_pActionFileSave->setDisabled(true);
-        m_pMenuView->setEnabled(false);
+        m_pActionFileExport->setDisabled(true);
+        m_pMenuView->setDisabled(true);
+        m_pSBToolBox->setDisabled(true);
+        m_pSBEStartSpin->setMinimum(ffDefault::NoFrame);
+        m_pSBEStartSpin->setValue(ffDefault::NoFrame);
+        m_pSBEStartSpin->setMaximum(ffDefault::NoFrame);
+        m_pSBEEndSpin->setMinimum(ffDefault::NoFrame);
+        m_pSBEEndSpin->setValue(ffDefault::NoFrame);
+        m_pSBEEndSpin->setMaximum(ffDefault::NoFrame);
+        m_pSBToolBox->setEnabled(false);
         break;
+    case (ffSequence::isValid):
     case (ffSequence::justOpened):
         m_pViewActionGroup->setEnabled(true);
         m_pActionFileOpen->setEnabled(true);
-        m_pActionFileSave->setEnabled(true);
+        m_pActionFileExport->setEnabled(true);
         m_pMenuView->setEnabled(true);
+        m_pSBEStartSpin->setMinimum(ffDefault::FirstFrame);
+        m_pSBEStartSpin->setMaximum(m_pDSLRLabView->getTotalFrames());
+        m_pSBEStartSpin->setValue(ffDefault::FirstFrame);
+        m_pSBEEndSpin->setMinimum(ffDefault::FirstFrame);
+        m_pSBEEndSpin->setMaximum(m_pDSLRLabView->getTotalFrames());
+        m_pSBEEndSpin->setValue(m_pDSLRLabView->getTotalFrames());
+        m_pSBToolBox->setEnabled(true);
         break;
     }
 }
@@ -142,21 +164,30 @@ void MainWindow::createObjects(void)
     m_pMainAnchorWidget = new QWidget;
     m_pMainAnchorWidget->setStyleSheet("background:lightGray");
 
-    m_pOutputOptionsAnchor = new QWidget;
-    m_pDisplayOptionsAnchor = new QWidget;
-
-    m_pDisplayPlaneLabel = new QLabel(tr("Viewer Planes:"));
-    m_pDisplayPlaneCombo = new QComboBox;
+    m_pSBEAnchor = new QWidget;
+    m_pSBVAnchor = new QWidget;
 
     // Main top to bottom layout.
-    m_pVBoxLayout = new QVBoxLayout;
+    m_pMainLayout = new QVBoxLayout;
 
-    // Sidebar top to bottom layout.
-    m_pOutputOptionsLayout = new QFormLayout;
-    m_pDisplayOptionsLayout = new QBoxLayout(QBoxLayout::TopToBottom);
+    // Sidebar top to bottom layouts.
+    m_pSBELayout = new QVBoxLayout;
+    m_pSBVLayout = new QVBoxLayout;
+
+    // Export Interface
+    m_pSBEPlaneLabel = new QLabel(tr("Plane(s) Exported:"));
+    m_pSBEPlaneCombo = new QComboBox;
+    m_pSBEStartEndLabel = new QLabel(tr("Start / End Frames:"));
+    m_pSBEStartEndLayout = new QHBoxLayout;
+    m_pSBEStartSpin = new QSpinBox;
+    m_pSBEEndSpin = new QSpinBox;
+
+    // Viewer Interface
+    m_pSBVPlaneLabel = new QLabel(tr("Plane(s) Viewed:"));
+    m_pSBVPlaneCombo = new QComboBox;
 
     m_pSplitter = new QSplitter(Qt::Horizontal);
-    m_pSidebarToolBox = new QToolBox;
+    m_pSBToolBox = new QToolBox;
 
     m_pDSLRLabView = new DSLRLabView;
 }
@@ -172,48 +203,67 @@ void MainWindow::initObjects(void)
     setWindowTitle(tr("YCbCr Lab"));
 
     setCentralWidget(m_pMainAnchorWidget);
-    centralWidget()->setLayout(m_pVBoxLayout);
+    centralWidget()->setLayout(m_pMainLayout);
 
     initSidebar();
-    m_pSplitter->addWidget(m_pSidebarToolBox);
+    m_pSplitter->addWidget(m_pSBToolBox);
     m_pSplitter->addWidget(m_pDSLRLabView);
 
-    //Establish the scaling ratios initially.
-    m_pSplitter->setStretchFactor(m_pSplitter->indexOf(m_pSidebarToolBox),
-                                   DSLRLAB_SIDEBAR_RATIO);
-    m_pSplitter->setStretchFactor(m_pSplitter->indexOf(m_pDSLRLabView),
-                                   DSLRLAB_PRIMARYVIEW_RATIO);
-
-    m_pVBoxLayout->addWidget(m_pSplitter);
+    m_pMainLayout->addWidget(m_pSplitter);
 }
 
 void MainWindow::initSidebar(void)
 {
-    m_pDisplayPlaneCombo->addItem(tr("Y"), ffRawFrame::Y);
-    m_pDisplayPlaneCombo->addItem(tr("Cb"), ffRawFrame::Cb);
-    m_pDisplayPlaneCombo->addItem(tr("Cr"), ffRawFrame::Cr);
-    m_pDisplayPlaneCombo->addItem(tr("Combined"), ffRawFrame::Combined);
-    m_pDisplayPlaneCombo->setCurrentIndex(m_pDSLRLabView->getDisplayPlane());
+    // Export Plane Combo Initialization
+    m_pSBEPlaneCombo->addItem(tr("Combined RGB"), ffExportDetails::RGB);
+    m_pSBEPlaneCombo->addItem(tr("YCbCr"), ffExportDetails::YCbCr);
+    m_pSBEPlaneCombo->addItem(tr("Raw Unscaled YCbCr"), ffExportDetails::Raw);
+    m_pSBEPlaneCombo->setCurrentIndex(ffExportDetails::RGB);
 
-    m_pOutputOptionsAnchor->setLayout(m_pOutputOptionsLayout);
-    m_pOutputOptionsLayout->setMargin(DSLRLAB_NOMARGIN);
-    m_pDisplayOptionsAnchor->setLayout(m_pDisplayOptionsLayout);
-    m_pDisplayOptionsLayout->setMargin(DSLRLAB_NOMARGIN);
+    // Viewer Plane Combo Initialization
+    m_pSBVPlaneCombo->addItem(tr("Y"), ffViewer::Y);
+    m_pSBVPlaneCombo->addItem(tr("Cb"), ffViewer::Cb);
+    m_pSBVPlaneCombo->addItem(tr("Cr"), ffViewer::Cr);
+    m_pSBVPlaneCombo->addItem(tr("Combined RGB"), ffViewer::RGB);
+    m_pSBVPlaneCombo->setCurrentIndex(ffViewer::Y);
 
-    m_pSidebarToolBox->addItem(m_pOutputOptionsAnchor, tr("Output"));
-    m_pSidebarToolBox->addItem(m_pDisplayOptionsAnchor, tr("Display"));
-    m_pSidebarToolBox->setCurrentIndex(1);
+    m_pSBEAnchor->setLayout(m_pSBELayout);
+    m_pSBELayout->setMargin(NOMARGIN);
+    m_pSBVAnchor->setLayout(m_pSBVLayout);
+    m_pSBVLayout->setMargin(NOMARGIN);
 
-    m_pDisplayOptionsLayout->addWidget(m_pDisplayPlaneCombo);
-    m_pDisplayOptionsLayout->addStretch();
+    m_pSBToolBox->addItem(m_pSBEAnchor, tr("Export"));
+    m_pSBToolBox->addItem(m_pSBVAnchor, tr("Viewer"));
+    m_pSBToolBox->setCurrentIndex(1);
 
-    m_pSidebarToolBox->setMinimumWidth(SIDEBAR_MINIMUM_WIDTH);
+    // Export Interface
+
+    m_pSBELayout->addWidget(m_pSBEPlaneLabel);
+    m_pSBELayout->addWidget(m_pSBEPlaneCombo);
+
+    m_pSBELayout->addWidget(m_pSBEStartEndLabel);
+    QWidget *pSBEStartEndAnchor = new QWidget;
+    m_pSBELayout->addWidget(pSBEStartEndAnchor);
+    m_pSBEStartEndLayout->setMargin(NOMARGIN);
+    pSBEStartEndAnchor->setLayout(m_pSBEStartEndLayout);
+    m_pSBEStartEndLayout->addWidget(m_pSBEStartSpin);
+    m_pSBEStartEndLayout->addWidget(m_pSBEEndSpin);
+    m_pSBELayout->addStretch();
+
+    // Viewer Interface
+    m_pSBVLayout->addWidget(m_pSBVPlaneLabel);
+    m_pSBVLayout->addWidget(m_pSBVPlaneCombo);
+    m_pSBVLayout->addStretch();
+
+    m_pSBToolBox->setMinimumWidth(SIDEBAR_MINIMUM_WIDTH);
+
+    connect(m_pSBVPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(onSidebarViewerPlaneChange(int)));
 }
 
 void MainWindow::createActions(void)
 {
     // File Menu Actions
-
     m_pFileActionGroup = new QActionGroup(this);
 
     m_pActionFileOpen = new QAction(tr("&Open..."), this);
@@ -222,11 +272,11 @@ void MainWindow::createActions(void)
             SLOT(onMenuFileOpen()));
     m_pFileActionGroup->addAction(m_pActionFileOpen);
 
-    m_pActionFileSave = new QAction(tr("&Save..."), this);
-    m_pActionFileSave->setShortcut(tr("Ctrl+s"));
-    connect(m_pActionFileSave, SIGNAL(triggered()), this,
-            SLOT(onMenuFileSave()));
-    m_pFileActionGroup->addAction(m_pActionFileSave);
+    m_pActionFileExport = new QAction(tr("&Export"), this);
+    m_pActionFileExport->setShortcut(tr("Ctrl+s"));
+    connect(m_pActionFileExport, SIGNAL(triggered()), this,
+            SLOT(onMenuFileExport()));
+    m_pFileActionGroup->addAction(m_pActionFileExport);
 
     m_pActionFileQuit = new QAction(tr("&Quit"), this);
     m_pActionFileQuit->setShortcut(tr("Ctrl+q"));
@@ -234,7 +284,6 @@ void MainWindow::createActions(void)
             SLOT(onMenuFileQuit()));
 
     // View Menu Actions
-
     m_pViewActionGroup = new QActionGroup(this);
 
     m_pActionViewFitToView = new QAction(tr("&Fit to View"), this);
@@ -249,28 +298,10 @@ void MainWindow::createActions(void)
             SLOT(onMenuViewZoom1x()));
     m_pViewActionGroup->addAction(m_pActionViewZoom1x);
 
-    /* TODO: Need to figure out the most useful zoom keys. Originally
-     * speculated that having hard 2x and 4x might be useful, but perhaps
-     * modifiers for the degree of zoom would be wiser.
-     *
-    m_pActionViewZoom2x = new QAction(tr("Zoom in by &2x"), this);
-    m_pActionViewZoom2x->setShortcut(tr("2"));
-    connect(m_pActionViewZoom2x, SIGNAL(triggered()), this,
-            SLOT(actionMenuViewZoom2x()));
-    m_pViewActionGroup->addAction(m_pActionViewZoom2x);
-
-    m_pActionViewZoom4x = new QAction(tr("Zoom in by &4x"), this);
-    m_pActionViewZoom4x->setShortcut(tr("4"));
-    connect(m_pActionViewZoom4x, SIGNAL(triggered()), this,
-            SLOT(actionMenuViewZoom4x()));
-    m_pViewActionGroup->addAction(m_pActionViewZoom4x); */
-
     connect(m_pDSLRLabView, SIGNAL(signal_error(QString)), this,
             SLOT(onError(QString)));
     connect(m_pDSLRLabView, SIGNAL(signal_updateUI(ffSequence::ffSequenceState)), this,
             SLOT(onUpdateUI(ffSequence::ffSequenceState)));
-    connect(m_pDisplayPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
-            SLOT(onDisplayPlaneChange(int)));
 }
 
 void MainWindow::createMenus(void)
@@ -278,7 +309,7 @@ void MainWindow::createMenus(void)
     // File Menu
     m_pMenuFile = new QMenu(tr("&File"), this);
     m_pMenuFile->addAction(m_pActionFileOpen);
-    m_pMenuFile->addAction(m_pActionFileSave);
+    m_pMenuFile->addAction(m_pActionFileExport);
     m_pMenuFile->addSeparator();
     m_pMenuFile->addAction(m_pActionFileQuit);
     menuBar()->addMenu(m_pMenuFile);
@@ -286,8 +317,6 @@ void MainWindow::createMenus(void)
     // View Menu
     m_pMenuView = new QMenu(tr("&View"), this);
     m_pMenuView->addAction(m_pActionViewZoom1x);
-    //m_pMenuView->addAction(m_pActionViewZoom2x);
-    //m_pMenuView->addAction(m_pActionViewZoom4x);
     m_pMenuView->addAction(m_pActionViewFitToView);
     menuBar()->addMenu(m_pMenuView);
 }
@@ -308,7 +337,7 @@ void MainWindow::onMenuFileOpen()
     }
 }
 
-void MainWindow::onMenuFileSave()
+void MainWindow::onMenuFileExport()
 {
     try
     {
@@ -342,19 +371,9 @@ void MainWindow::onMenuViewZoom1x()
     m_pDSLRLabView->getTextPillItem()->start(tr("Zoom 1x"));
 }
 
-void MainWindow::onMenuViewZoom2x()
+void MainWindow::onSidebarViewerPlaneChange(int plane)
 {
-    m_pDSLRLabView->getTextPillItem()->start(tr("Zoom 2x"));
-}
-
-void MainWindow::onMenuViewZoom4x()
-{
-    m_pDSLRLabView->getTextPillItem()->start(tr("Zoom 4x"));
-}
-
-void MainWindow::onDisplayPlaneChange(int plane)
-{
-    m_pDSLRLabView->setDisplayPlane((ffRawFrame::PlaneType)plane);
+    m_pDSLRLabView->setViewerPlane((ffViewer::ViewerPlane)plane);
 }
 
 void MainWindow::onOpenFile(QString fileName)

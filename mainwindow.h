@@ -6,11 +6,21 @@
 #include "dslrlabview.h"
 #include "ffsequence.h"
 
+enum MarginDefault
+{
+    NOMARGIN = 0,
+    LEFTMARGIN = 20
+};
+
+enum SpacingDefault
+{
+    BASESPACING = 14
+};
+
 #define DSLRLAB_DEFAULT_WIDTH               1280
 #define DSLRLAB_DEFAULT_HEIGHT              720
 #define DSLRLAB_SIDEBAR_RATIO               0
 #define DSLRLAB_PRIMARYVIEW_RATIO           5
-#define DSLRLAB_NOMARGIN                    0
 
 #define SIDEBAR_MINIMUM_WIDTH               DSLRLAB_DEFAULT_WIDTH/5
 
@@ -43,46 +53,53 @@ public:
 
 private slots:
     void onMenuFileOpen();
-    void onMenuFileSave();
+    void onMenuFileExport();
     void onMenuFileQuit();
     void onMenuViewFitToView();
     void onMenuViewZoom1x();
-    void onMenuViewZoom2x();
-    void onMenuViewZoom4x();
-    void onDisplayPlaneChange(int);
     void onOpenFile(QString);
     void onExport(QString, long, long);
     void onError(QString);
     void onUpdateUI(ffSequence::ffSequenceState);
 
+    void onSidebarViewerPlaneChange(int);
+
 private:
     // Layouts
-    QVBoxLayout                            *m_pVBoxLayout;
-    QFormLayout                            *m_pOutputOptionsLayout;
-    QBoxLayout                            *m_pDisplayOptionsLayout;
+    QVBoxLayout                            *m_pMainLayout;
+    QVBoxLayout                            *m_pSBELayout;
+    QVBoxLayout                            *m_pSBVLayout;
 
     // Widgets
     QWidget                                *m_pMainAnchorWidget;
-    QWidget                                *m_pOutputOptionsAnchor;
-    QWidget                                *m_pDisplayOptionsAnchor;
 
-    QLabel                                 *m_pDisplayPlaneLabel;
-    QComboBox                              *m_pDisplayPlaneCombo;
+    QWidget                                *m_pSBEAnchor;
+    QWidget                                *m_pSBVAnchor;
+
+    QToolBox                               *m_pSBToolBox;
+
+    QLabel                                 *m_pSBEPlaneLabel;
+    QComboBox                              *m_pSBEPlaneCombo;
+    QLabel                                 *m_pSBEStartEndLabel;
+    QHBoxLayout                            *m_pSBEStartEndLayout;
+    QSpinBox                               *m_pSBEStartSpin;
+    QSpinBox                               *m_pSBEEndSpin;
+
+    QLabel                                 *m_pSBVPlaneLabel;
+    QComboBox                              *m_pSBVPlaneCombo;
+
     DSLRLabView                            *m_pDSLRLabView;
     QSplitter                              *m_pSplitter;
-    QToolBox                               *m_pSidebarToolBox;
 
     // Actions
     QActionGroup                           *m_pViewActionGroup;
     QActionGroup                           *m_pFileActionGroup;
 
     QAction                                *m_pActionFileOpen;
-    QAction                                *m_pActionFileSave;
+    QAction                                *m_pActionFileExport;
     QAction                                *m_pActionFileQuit;
     QAction                                *m_pActionViewFitToView;
     QAction                                *m_pActionViewZoom1x;
-    QAction                                *m_pActionViewZoom2x;
-    QAction                                *m_pActionViewZoom4x;
 
     // Menus
     QMenu                                  *m_pMenuFile;

@@ -109,7 +109,7 @@ void DSLRLabView::initObjects(void)
     m_pProgressTimeline->setUpdateInterval(TIMELINE_PROGRESS_UPDATE);
     m_pTimeLine->setUpdateInterval(TIMELINE_ZOOM_UPDATE);
 
-    m_displayPlane = ffRawFrame::Combined;
+    m_viewerPlane = ffViewer::Y;
 
     connect(m_pTimeLine, SIGNAL(valueChanged(qreal)),
             SLOT(onScaleTimeslice(qreal)));
@@ -192,31 +192,33 @@ void DSLRLabView::updateCurrentFrame(long frame)
     QImage *pImage = NULL;
     ffRawFrame *pRawFrame = m_pffSequence->setCurrentFrame(frame);
 
-    switch (m_displayPlane)
+    switch (m_viewerPlane)
     {
-    case (ffRawFrame::Combined):
-    case (ffRawFrame::Y):
+    case (ffViewer::RGB):
+    case (ffViewer::Y):
         pImage = new QImage(pRawFrame->m_pY,
                                     m_pffSequence->getLumaSize().m_width,
                                     m_pffSequence->getLumaSize().m_height,
                                     QImage::Format_Indexed8);
         break;
-    case (ffRawFrame::Cb):
+    case (ffViewer::Cb):
         pImage = new QImage(pRawFrame->m_pCb,
                                     m_pffSequence->getChromaSize().m_width,
                                     m_pffSequence->getChromaSize().m_height,
                                     QImage::Format_Indexed8);
         break;
-    case (ffRawFrame::Cr):
+    case (ffViewer::Cr):
         pImage = new QImage(pRawFrame->m_pCr,
                                     m_pffSequence->getChromaSize().m_width,
                                     m_pffSequence->getChromaSize().m_height,
                                     QImage::Format_Indexed8);
         break;
     }
-
+    update();
     m_pGraphicsPixmapItem->setPixmap(QPixmap::fromImage(*pImage));
     delete pImage;
+    m_pTextPill->start(tr("Frame ") +
+                       QString::number(m_pffSequence->getCurrentFrame()));
 }
 
 void DSLRLabView::fitToView()
@@ -235,16 +237,16 @@ QString DSLRLabView::getFileURI(void)
     return QString::fromStdString(m_pffSequence->getFileURI());
 }
 
-ffRawFrame::PlaneType DSLRLabView::getDisplayPlane(void)
+ffViewer::ViewerPlane DSLRLabView::getViewerPlane(void)
 {
-    return m_displayPlane;
+    return m_viewerPlane;
 }
 
-void DSLRLabView::setDisplayPlane(ffRawFrame::PlaneType planeType)
+void DSLRLabView::setViewerPlane(ffViewer::ViewerPlane planeType)
 {
-    if ((getState() == ffSequence::isValid) && (planeType != m_displayPlane))
+    if ((getState() == ffSequence::isValid) && (planeType != m_viewerPlane))
     {
-        m_displayPlane = planeType;
+        m_viewerPlane = planeType;
         updateCurrentFrame(m_pffSequence->getCurrentFrame());
         m_pGraphicsView->setSceneRect(m_pGraphicsPixmapItem->boundingRect());
     }
@@ -325,7 +327,7 @@ QTextPill* DSLRLabView::getTextPillItem(void)
 void DSLRLabView::onScaleTimeslice(qreal)
 {
     QTransform matrix(m_pGraphicsView->matrix());
-    qreal factor = 1.0 + qreal(_numScheduledScalings) / 500.0;
+    qreal factor = 1.0 + qreal(m_numScheduledScalings) / 500.0;
     qreal scalefactor = matrix.m11() * factor;
 
     if ((scalefactor >= MAXIMUM_SCALE) && (factor > 1.0))
@@ -342,10 +344,10 @@ void DSLRLabView::onScaleTimeslice(qreal)
 
 void DSLRLabView::onScaleAnimFinished(void)
 {
-    if (_numScheduledScalings > 0)
-        _numScheduledScalings--;
+    if (m_numScheduledScalings > 0)
+        m_numScheduledScalings--;
     else
-        _numScheduledScalings++;
+        m_numScheduledScalings++;
 }
 
 void DSLRLabView::onError(QString)
@@ -367,7 +369,7 @@ void DSLRLabView::onProgressStart(void)
 
 void DSLRLabView::onProgress(double factor)
 {
-    _targetProgress = (factor * PROGRESS_MAXIMUM) +
+    m_targetProgress = (factor * PROGRESS_MAXIMUM) +
             PROGRESS_MAXIMUM * TIMELINE_PROGRESS_DELAY;
     if (m_pProgressTimeline->state() != QTimeLine::Running)
         m_pProgressTimeline->start();
@@ -382,9 +384,9 @@ void DSLRLabView::onProgressEnd(void)
 
 void DSLRLabView::onProgressAnimation(qreal)
 {
-    if (_targetProgress >= m_pProgressBar->value())
+    if (m_targetProgress >= m_pProgressBar->value())
     {
-        int step = (((double)_targetProgress -
+        int step = (((double)m_targetProgress -
                      (double)m_pProgressBar->value()) *
                     ((double)TIMELINE_PROGRESS_UPDATE /
                      (double)TIMELINE_DURATION)) + 1.5;
@@ -439,7 +441,7 @@ void DSLRLabView::onUpdateUI(ffSequence::ffSequenceState state)
         break;
     case (ffSequence::justOpened):
         m_pTextPill->start(tr("Loaded file ") +
-                              QString::fromStdString(m_pffSequence->getFileURI()));
+                           QString::fromStdString(m_pffSequence->getFileURI()));
 
         updateCurrentFrame(m_pffSequence->getCurrentFrame());
         fitToView();
@@ -490,9 +492,9 @@ void DSLRLabView::wheelEvent(QWheelEvent* event)
         int numDegrees = event->delta() / 8;
         int numSteps = numDegrees / 10;
 
-        _numScheduledScalings += numSteps;
-        if (_numScheduledScalings * numSteps < 0)
-            _numScheduledScalings = numSteps;
+        m_numScheduledScalings += numSteps;
+        if (m_numScheduledScalings * numSteps < 0)
+            m_numScheduledScalings = numSteps;
 
         if (m_pTimeLine->state() != QTimeLine::Running)
             m_pTimeLine->start();

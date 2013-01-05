@@ -26,17 +26,17 @@ ffRawFrame::ffRawFrame(AVFrame* pFrame) :
     int c_width         = y_width >> c_hshift;
     int c_height        = y_height >> c_wshift;
 
-    int y_stride        = pFrame->linesize[FF_Y];
-    int cb_stride       = pFrame->linesize[FF_CB];
-    int cr_stride       = pFrame->linesize[FF_CR];
+    int y_stride        = pFrame->linesize[ffRawFrame::Y];
+    int cb_stride       = pFrame->linesize[ffRawFrame::Cb];
+    int cr_stride       = pFrame->linesize[ffRawFrame::Cr];
 
     long len_y          = y_width * y_height;
     long len_cb         = c_width * c_height;
     long len_cr         = c_width * c_height;
 
-    unsigned char* pY   = pFrame->data[FF_Y];
-    unsigned char* pCb  = pFrame->data[FF_CB];
-    unsigned char* pCr  = pFrame->data[FF_CR];
+    unsigned char* pY   = pFrame->data[ffRawFrame::Y];
+    unsigned char* pCb  = pFrame->data[ffRawFrame::Cb];
+    unsigned char* pCr  = pFrame->data[ffRawFrame::Cr];
 
     // TODO: Check for null pointers and throw relevant exceptions.
     // Initialize the Y buffer.
@@ -68,7 +68,7 @@ ffRawFrame::~ffRawFrame()
 // The following will take a given plane and scale it to the given
 // dimensions using the given interpolator. For any given ffSequence,
 // only one scaled float version will exist.
-void ffRawFrame::scalePlane(ffRawFrame::PlaneType plane, ffSize dst,
+void ffRawFrame::scalePlane(ffRawFrame::Plane plane, ffSize dst,
                             ffSizeRatio ratio, ffInterpolator::Type interp)
 {
     switch (interp)

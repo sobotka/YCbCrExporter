@@ -13,8 +13,8 @@
 #define DEFAULT_STEP                    0.0
 #define DEFAULT_STEPVALUE               1.0
 
-#define MARGIN_WIDTH_FACTOR             3.0
-#define MARGIN_HEIGHT_FACTOR            2.0
+#define WIDTHFACTOR                     3.0
+#define HEIGHTFACTOR                    2.0
 
 class QTextPill : public QGraphicsWidget
 {
@@ -22,6 +22,9 @@ private:
     QColor                  m_colorFill;
     QColor                  m_colorText;
     QString                 m_text;
+    QFontMetricsF           m_metrics;
+    QRectF                  m_rectF;
+    //QRectF                  m_oldRectF;
 
     QGraphicsOpacityEffect *m_pEffect;
     QPropertyAnimation     *m_pPropertyAnimation;
@@ -33,6 +36,7 @@ private:
     void initObjects(void);
 
     QRectF boundingRect() const;
+    //QPainterPath shape() const;
 
     void setText(QString text);
 public:

@@ -78,8 +78,8 @@ public:
     long getTotalFrames(void);
     QString getFileURI(void);
 
-    ffRawFrame::PlaneType getDisplayPlane(void);
-    void setDisplayPlane(ffRawFrame::PlaneType);
+    ffViewer::ViewerPlane getViewerPlane(void);
+    void setViewerPlane(ffViewer::ViewerPlane);
 
     ffSequence::ffSequenceState getState(void);
     void openSequence(char *);
@@ -121,7 +121,7 @@ private:
 
     QGraphicsPixmapItem                    *m_pGraphicsPixmapItem;
 
-    QffSequence                     *m_pffSequence;
+    QffSequence                            *m_pffSequence;
 
     QTimeLine                              *m_pTimeLine;
 
@@ -142,10 +142,14 @@ private:
     QSlider                                *m_pSlider;
     QGraphicsWidget                        *m_pgwSlider;
 
-    ffRawFrame::PlaneType                   m_displayPlane;
+    ffViewer::ViewerPlane                  m_viewerPlane;
 
-    int                                     _numScheduledScalings;
-    int                                     _targetProgress;
+    long                                    m_exportStart;
+    long                                    m_exportEnd;
+    ffExportDetails::ExportPlane           m_exportPlane;
+
+    int                                     m_numScheduledScalings;
+    int                                     m_targetProgress;
 
     void createObjects(void);
     void createAnimations(void);

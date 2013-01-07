@@ -2,6 +2,25 @@
 #include <stdexcept>
 #include <math.h>
 
+/******************************************************************************
+ * ffTrim
+ ******************************************************************************/
+ffTrim::ffTrim(long in, long out) : m_in(in), m_out(out)
+{
+
+}
+
+/******************************************************************************
+ * ffSizeRatio
+ ******************************************************************************/
+ffSize::ffSize(long w, long h) : m_width(w), m_height(h)
+{
+
+}
+
+/******************************************************************************
+ * ffSizeRatio
+ ******************************************************************************/
 ffSizeRatio::ffSizeRatio(ffSize src, ffSize dst) :
     m_widthRatio(0), m_heightRatio(0)
 {
@@ -9,9 +28,106 @@ ffSizeRatio::ffSizeRatio(ffSize src, ffSize dst) :
     m_heightRatio = (float)src.m_height / dst.m_height;
 }
 
-//***********************
-// * ffRawFrame
-// **********************
+/******************************************************************************
+ * ffExportDetails
+ ******************************************************************************/
+ffExportDetails::ffExportDetails(void) :
+    m_exportSize(ffDefault::NoDimension,ffDefault::NoDimension),
+    m_YInterp(ffInterpolator::Nearest),
+    m_CbInterp(ffInterpolator::Nearest),
+    m_CrInterp(ffInterpolator::Nearest),
+    m_trim(ffDefault::NoFrame,ffDefault::NoFrame),
+    m_exportPlanes(ffExportDetails::RGB)
+{
+}
+
+void ffExportDetails::init(ffSequence *pSeq)
+{
+    if (pSeq != NULL)
+    {
+        m_exportSize.m_width = pSeq->getLumaSize().m_width;
+        m_exportSize.m_height = pSeq->getLumaSize().m_height;
+        m_trim.m_in = ffDefault::FirstFrame;
+        m_trim.m_out = pSeq->getTotalFrames();
+    }
+}
+
+void ffExportDetails::deinit(void)
+{
+    m_exportSize.m_width = 0;
+    m_exportSize.m_height = 0;
+    m_YInterp = ffInterpolator::Nearest;
+    m_CbInterp = ffInterpolator::Nearest;
+    m_CrInterp = ffInterpolator::Nearest;
+    m_trim.m_in = ffDefault::NoFrame;
+    m_trim.m_out = ffDefault::NoFrame;
+}
+
+ffSize ffExportDetails::getExportSize(void)
+{
+    return m_exportSize;
+}
+
+ffInterpolator::Type ffExportDetails::getYInterp(void)
+{
+    return m_YInterp;
+}
+
+ffInterpolator::Type ffExportDetails::getCbInterp(void)
+{
+    return m_CbInterp;
+}
+
+ffInterpolator::Type ffExportDetails::getCrInterp(void)
+{
+    return m_CrInterp;
+}
+
+ffTrim ffExportDetails::getTrim(void)
+{
+    return m_trim;
+}
+
+ffExportDetails::ExportPlane ffExportDetails::getExportPlane()
+{
+    return m_exportPlanes;
+}
+
+void ffExportDetails::setExportSize(ffSize size)
+{
+    m_exportSize.m_width = size.m_width;
+    m_exportSize.m_height = size.m_height;
+}
+
+void ffExportDetails::setYInterp(ffInterpolator::Type yType)
+{
+    m_YInterp = yType;
+}
+
+void ffExportDetails::setCbInterp(ffInterpolator::Type cbType)
+{
+    m_CbInterp = cbType;
+}
+
+void ffExportDetails::setCrInterp(ffInterpolator::Type crType)
+{
+    m_CrInterp = crType;
+}
+
+void ffExportDetails::setTrim(long in, long out)
+{
+    m_trim.m_in = in;
+    m_trim.m_out = out;
+}
+
+void ffExportDetails::setExportPlane(ffExportDetails::ExportPlane plane)
+{
+    m_exportPlanes = plane;
+}
+
+/******************************************************************************
+ * ffRawFrame
+ ******************************************************************************/
 ffRawFrame::ffRawFrame(AVFrame* pFrame) :
     m_pY(NULL), m_pCb(NULL), m_pCr(NULL)
 {
@@ -68,8 +184,8 @@ ffRawFrame::~ffRawFrame()
 // The following will take a given plane and scale it to the given
 // dimensions using the given interpolator. For any given ffSequence,
 // only one scaled float version will exist.
-void ffRawFrame::scalePlane(ffRawFrame::Plane plane, ffSize dst,
-                            ffSizeRatio ratio, ffInterpolator::Type interp)
+void ffRawFrame::scalePlane(ffRawFrame::Plane /*plane*/, ffSize /*dst*/,
+                            ffSizeRatio /*ratio*/, ffInterpolator::Type interp)
 {
     switch (interp)
     {
@@ -84,10 +200,9 @@ void ffRawFrame::scalePlane(ffRawFrame::Plane plane, ffSize dst,
     }
 }
 
-//***********************
-// * ffRawFrameFloat
-// **********************
-
+/******************************************************************************
+ * ffRawFrameFloat
+ ******************************************************************************/
 ffRawFrameFloat::ffRawFrameFloat(long len) :
     m_pfY(NULL),
     m_pfCb(NULL),
@@ -105,19 +220,22 @@ ffRawFrameFloat::~ffRawFrameFloat()
     delete[] m_pfCr;
 }
 
-//***********************
-// * ffSequence
-// **********************
+/******************************************************************************
+ * ffSequence
+ ******************************************************************************/
 bool ffSequence::m_isInitialized;
 
 ffSequence::ffSequence(void):
     m_pFormatCtx(NULL), m_pCodecCtx(NULL), m_pCodec(NULL),
-    m_totalFrames(FF_NO_FRAME), m_currentFrame(FF_NO_FRAME), m_lumaSize(0,0),
-    m_chromaSize(0,0), m_scaledSize(0,0), m_stream(FF_NO_STREAM),
+    m_pExportDetails(NULL),
+    m_totalFrames(ffDefault::NoFrame), m_currentFrame(ffDefault::NoFrame),
+    m_lumaSize(0,0),
+    m_chromaSize(0,0), m_stream(ffDefault::NoStream),
     m_state(isInvalid)
 {
     if (!m_isInitialized)
         initialize();
+    m_pExportDetails = new ffExportDetails;
 }
 
 ffSequence::~ffSequence()
@@ -155,12 +273,13 @@ void ffSequence::cleanup(void)
 
     // The rest of the API relies on the various variables and makes
     // assumptions they are applicable. Zero them out.
-    m_totalFrames = FF_NO_FRAME;
-    m_currentFrame = FF_NO_FRAME;
+    m_totalFrames = ffDefault::NoFrame;
+    m_currentFrame = ffDefault::NoFrame;
     m_lumaSize = ffSize(FF_NO_DIMENSION, FF_NO_DIMENSION);
     m_chromaSize = ffSize(FF_NO_DIMENSION, FF_NO_DIMENSION);
-    m_stream = FF_NO_STREAM;
+    m_stream = ffDefault::NoStream;
     m_state = isInvalid;
+    m_pExportDetails->deinit();
 }
 
 void ffSequence::freeRawFrames(void)
@@ -276,7 +395,8 @@ void ffSequence::readFile(char *fileName)
         // Only if we make it this far is the ffSequence object valid.
         m_state = isValid;
         m_fileURI = fileName;
-        setCurrentFrame(FF_FIRST_FRAME);
+        setCurrentFrame(ffDefault::FirstFrame, this);
+        m_pExportDetails->init(this);
         onProgressEnd();
         onJustOpened();
     }
@@ -294,7 +414,7 @@ void ffSequence::readFile(char *fileName)
     }
 }
 
-void ffSequence::writeFile(char *fileName, long start, long end)
+void ffSequence::writeFile(char *fileName, long /*start*/, long /*end*/)
 {
     try
     {
@@ -330,12 +450,23 @@ ffRawFrame* ffSequence::getRawFrame(long frame)
 
 // All frames internally are zero based, but everything above this layer
 // of abstraction should talk in one based "reality" terms.
-ffRawFrame* ffSequence::setCurrentFrame(long frame)
+ffRawFrame* ffSequence::setCurrentFrame(long frame, void *sender)
 {
-    if ((frame - 1) != m_currentFrame)
+    if (((frame - 1) != m_currentFrame) &&
+        ((frame - 1) > ffDefault::NoFrame) &&
+        ((frame - 1) <= getTotalFrames()))
+    {
         m_currentFrame = (frame - 1);
+        onFrameChanged(getCurrentFrame(), sender);
+    }
+    else
+    {
+        throw ffError("((frame - 1) != m_currentFrame) && ((frame - 1) > "
+                      "ffDefault::NoFrame) && ((frame - 1) <= "
+                      "getTotalFrames())", ffError::ERROR_BAD_FRAME);
+    }
 
-    return getRawFrame(frame);
+    return getRawFrame(getCurrentFrame());
 }
 
 long ffSequence::getCurrentFrame(void)
@@ -346,6 +477,51 @@ long ffSequence::getCurrentFrame(void)
 long ffSequence::getTotalFrames(void)
 {
     return m_frames.size();
+}
+
+void ffSequence::setExportTrim(long in, long out, void *sender)
+{
+    if ((in > getCurrentFrame()) || (out < getCurrentFrame()))
+        throw ffError("(in > getCurrentFrame()) || (out < getCurrentFrame())",
+                      ffError::ERROR_BAD_TRIM);
+    else
+    {
+        ffTrim trim = getExportTrim();
+        if (!((in == trim.m_in) && (out == trim.m_out)))
+        {
+            m_pExportDetails->setTrim(in, out);
+            onExportTrimChanged(getExportTrim(), sender);
+        }
+    }
+}
+
+void ffSequence::setExportTrimIn(long in, void *sender)
+{
+    setExportTrim(in, m_pExportDetails->getTrim().m_out, sender);
+}
+
+void ffSequence::setExportTrimOut(long out, void *sender)
+{
+    setExportTrim(m_pExportDetails->getTrim().m_in, out, sender);
+}
+
+void ffSequence::setExportPlane(ffExportDetails::ExportPlane plane, void *sender)
+{
+    if (plane != getExportPlane())
+    {
+        m_pExportDetails->setExportPlane(plane);
+        onExportPlaneChanged(getExportPlane(), sender);
+    }
+}
+
+ffTrim ffSequence::getExportTrim(void)
+{
+    return m_pExportDetails->getTrim();
+}
+
+ffExportDetails::ExportPlane ffSequence::getExportPlane()
+{
+    return m_pExportDetails->getExportPlane();
 }
 
 ffSize ffSequence::getLumaSize(void)
@@ -399,6 +575,21 @@ void ffSequence::onJustClosed(void)
 }
 
 void ffSequence::onJustErrored(void)
+{
+    // Pass
+}
+
+void ffSequence::onExportTrimChanged(ffTrim, void *)
+{
+    // Pass
+}
+
+void ffSequence::onExportPlaneChanged(ffExportDetails::ExportPlane, void *)
+{
+    // Pass
+}
+
+void ffSequence::onFrameChanged(long, void *)
 {
     // Pass
 }

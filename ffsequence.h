@@ -22,20 +22,33 @@ OIIO_NAMESPACE_USING
 
 #define FF_FIRST_FRAME                                      1
 
-#define FF_NO_FRAME                                        -1
-#define FF_NO_STREAM                                       -1
+//#define FF_NO_FRAME                                        -1
+//#define FF_NO_STREAM                                       -1
 #define FF_NO_DIMENSION                                    -1
 
+/******************************************************************************
+ * Forward Declarations
+ ******************************************************************************/
+class ffSequence;
+
+/******************************************************************************
+ * ffDefault
+ ******************************************************************************/
 class ffDefault
 {
 public:
     enum Defaults
     {
-        NoFrame =                                               0,
+        NoFrame =                                              -1,
+        NoStream =                                             -1,
+        NoDimension =                                          -1,
         FirstFrame =                                            1
     };
 };
 
+/******************************************************************************
+ * ffInterpolator
+ ******************************************************************************/
 class ffInterpolator
 {
 public:
@@ -45,12 +58,18 @@ public:
     };
 };
 
+/******************************************************************************
+ * ffAVPacket
+ ******************************************************************************/
 class ffAVPacket : public AVPacket
 {
 public:
     ffAVPacket():AVPacket() {}
 };
 
+/******************************************************************************
+ * ffError
+ ******************************************************************************/
 class ffError : public std::runtime_error
 {
 public:
@@ -61,7 +80,9 @@ public:
         ERROR_NO_DECODER,
         ERROR_ALLOC_ERROR,
         ERROR_BAD_FILENAME,
-        ERROR_NULL_FILENAME
+        ERROR_NULL_FILENAME,
+        ERROR_BAD_TRIM,
+        ERROR_BAD_FRAME
     };
 
 private:
@@ -79,21 +100,33 @@ public:
         ffError(what_arg, error) {}
 };
 
+/******************************************************************************
+ * ffTrim
+ ******************************************************************************/
 class ffTrim
 {
-private:
+public:
     long                                    m_in;
     long                                    m_out;
+
+    ffTrim(long, long);
 };
 
+/******************************************************************************
+ * ffSize
+ ******************************************************************************/
 class ffSize
 {
 public:
-    ffSize(long w, long h): m_width(w), m_height(h) { }
     long                                    m_width;
     long                                    m_height;
+
+    ffSize(long, long);
 };
 
+/******************************************************************************
+ * ffSizeRatio
+ ******************************************************************************/
 class ffSizeRatio
 {
 public:
@@ -102,6 +135,9 @@ public:
     float                                   m_heightRatio;
 };
 
+/******************************************************************************
+ * ffRawFrame
+ ******************************************************************************/
 class ffRawFrame
 {
 private:
@@ -111,7 +147,7 @@ public:
     {
         Y =                         0,
         Cb =                        1,
-        Cr =                        2,
+        Cr =                        2
     };
 
     unsigned char                  *m_pY;
@@ -125,38 +161,9 @@ public:
                     ffInterpolator::Type);
 };
 
-class ffViewer
-{
-public:
-    enum ViewerPlane
-    {
-        Y =                                 ffRawFrame::Y,
-        Cb =                                ffRawFrame::Cb,
-        Cr =                                ffRawFrame::Cr,
-        RGB
-    };
-};
-
-class ffExportDetails
-{
-public:
-    enum ExportPlane
-    {
-        RGB =                               0,
-        YCbCr =                             1,
-        Raw =                               2
-    };
-private:
-    ffSize                                  m_targetSize;
-    ffInterpolator::Type                    m_YInterp;
-    ffInterpolator::Type                    m_CbInterp;
-    ffInterpolator::Type                    m_CrInterp;
-    ffTrim                                  m_trim;
-    ExportPlane                             m_planes;
-
-public:
-};
-
+/******************************************************************************
+ * ffRawFrameFloat
+ ******************************************************************************/
 class ffRawFrameFloat
 {
 private:
@@ -169,6 +176,65 @@ public:
     ~ffRawFrameFloat();
 };
 
+/******************************************************************************
+ * ffViewer
+ ******************************************************************************/
+class ffViewer
+{
+public:
+    enum ViewerPlane
+    {
+        Y =                                 ffRawFrame::Y,
+        Cb =                                ffRawFrame::Cb,
+        Cr =                                ffRawFrame::Cr,
+        RGB
+    };
+};
+
+/******************************************************************************
+ * ffExportDetails
+ ******************************************************************************/
+class ffExportDetails
+{
+public:
+    enum ExportPlane
+    {
+        RGB =                               0,
+        YCbCr =                             1,
+        Raw =                               2
+    };
+
+private:
+    ffSize                                  m_exportSize;
+    ffInterpolator::Type                    m_YInterp;
+    ffInterpolator::Type                    m_CbInterp;
+    ffInterpolator::Type                    m_CrInterp;
+    ffTrim                                  m_trim;
+    ExportPlane                             m_exportPlanes;
+
+public:
+    ffExportDetails(void);
+    void init(ffSequence *);
+    void deinit(void);
+
+    ffSize getExportSize(void);
+    ffInterpolator::Type getYInterp(void);
+    ffInterpolator::Type getCbInterp(void);
+    ffInterpolator::Type getCrInterp(void);
+    ffTrim getTrim(void);
+    ExportPlane getExportPlane(void);
+
+    void setExportSize(ffSize);
+    void setYInterp(ffInterpolator::Type);
+    void setCbInterp(ffInterpolator::Type);
+    void setCrInterp(ffInterpolator::Type);
+    void setTrim(long, long);
+    void setExportPlane(ExportPlane);
+};
+
+/******************************************************************************
+ * ffSequence
+ ******************************************************************************/
 class ffSequence
 {
 public:
@@ -188,11 +254,13 @@ private:
     AVCodecContext                         *m_pCodecCtx;
     AVCodec                                *m_pCodec;
 
+    ffExportDetails                        *m_pExportDetails;
+
     long                                    m_totalFrames;
     long                                    m_currentFrame;
     ffSize                                  m_lumaSize;
     ffSize                                  m_chromaSize;
-    ffSize                                  m_scaledSize;
+
     int                                     m_stream;
     static bool                             m_isInitialized;
     std::vector<ffRawFrame*>                m_frames;
@@ -214,9 +282,15 @@ public:
     void closeFile(void);
 
     ffRawFrame* getRawFrame(long);
-    ffRawFrame* setCurrentFrame(long);
+    ffRawFrame* setCurrentFrame(long, void *);
     long getCurrentFrame(void);
     long getTotalFrames(void);
+    void setExportTrim(long, long, void *);
+    void setExportTrimIn(long, void *);
+    void setExportTrimOut(long, void *);
+    void setExportPlane(ffExportDetails::ExportPlane, void *);
+    ffTrim getExportTrim(void);
+    ffExportDetails::ExportPlane getExportPlane(void);
     ffSize getLumaSize(void);
     ffSize getChromaSize(void);
     ffSequenceState getState(void);
@@ -231,5 +305,11 @@ public:
     virtual void onJustOpened(void);
     virtual void onJustClosed(void);
     virtual void onJustErrored(void);
+    // The following are events generated via set* functions. Beware, all
+    // objects that set should include themselves in the sender and assert
+    // that correct action is taken to avoid recursive loops.
+    virtual void onExportTrimChanged(ffTrim, void *);
+    virtual void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
+    virtual void onFrameChanged(long, void *);
 };
 #endif // FFSEQUENCE_H

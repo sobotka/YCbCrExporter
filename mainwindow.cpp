@@ -47,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent) :
     createActions();
     createMenus();
 
-    onUpdateUI(m_pDSLRLabView->getState());
+    onStateChanged(m_pDSLRLabView->getState());
 }
 
 MainWindow::~MainWindow()
@@ -106,84 +106,16 @@ void MainWindow::exportFile(void)
     }
 }
 
-void MainWindow::onUpdateUI(ffSequence::ffSequenceState state)
-{
-    switch (state)
-    {
-    case (ffSequence::justClosed):
-    case (ffSequence::justErrored):
-    case (ffSequence::isInvalid):
-        m_pViewActionGroup->setDisabled(true);
-        m_pActionFileOpen->setEnabled(true);
-        m_pActionFileExport->setDisabled(true);
-        m_pMenuView->setDisabled(true);
-        m_pSBToolBox->setDisabled(true);
-        m_pSBEStartSpin->setMinimum(ffDefault::NoFrame);
-        m_pSBEStartSpin->setValue(ffDefault::NoFrame);
-        m_pSBEStartSpin->setMaximum(ffDefault::NoFrame);
-        m_pSBEEndSpin->setMinimum(ffDefault::NoFrame);
-        m_pSBEEndSpin->setValue(ffDefault::NoFrame);
-        m_pSBEEndSpin->setMaximum(ffDefault::NoFrame);
-        m_pSBToolBox->setEnabled(false);
-        break;
-    case (ffSequence::isLoading):
-    case (ffSequence::justLoading):
-        m_pViewActionGroup->setDisabled(true);
-        m_pActionFileOpen->setDisabled(true);
-        m_pActionFileExport->setDisabled(true);
-        m_pMenuView->setDisabled(true);
-        m_pSBToolBox->setDisabled(true);
-        m_pSBEStartSpin->setMinimum(ffDefault::NoFrame);
-        m_pSBEStartSpin->setValue(ffDefault::NoFrame);
-        m_pSBEStartSpin->setMaximum(ffDefault::NoFrame);
-        m_pSBEEndSpin->setMinimum(ffDefault::NoFrame);
-        m_pSBEEndSpin->setValue(ffDefault::NoFrame);
-        m_pSBEEndSpin->setMaximum(ffDefault::NoFrame);
-        m_pSBToolBox->setEnabled(false);
-        break;
-    case (ffSequence::isValid):
-    case (ffSequence::justOpened):
-        m_pViewActionGroup->setEnabled(true);
-        m_pActionFileOpen->setEnabled(true);
-        m_pActionFileExport->setEnabled(true);
-        m_pMenuView->setEnabled(true);
-        m_pSBEStartSpin->setMinimum(ffDefault::FirstFrame);
-        m_pSBEStartSpin->setMaximum(m_pDSLRLabView->getTotalFrames());
-        m_pSBEStartSpin->setValue(ffDefault::FirstFrame);
-        m_pSBEEndSpin->setMinimum(ffDefault::FirstFrame);
-        m_pSBEEndSpin->setMaximum(m_pDSLRLabView->getTotalFrames());
-        m_pSBEEndSpin->setValue(m_pDSLRLabView->getTotalFrames());
-        m_pSBToolBox->setEnabled(true);
-        break;
-    }
-}
-
 void MainWindow::createObjects(void)
 {
-    // Provide an empty anchoring widget to anchor the QVBoxLayout.
-    m_pMainAnchorWidget = new QWidget;
-    m_pMainAnchorWidget->setStyleSheet("background:lightGray");
-
-    m_pSBEAnchor = new QWidget;
-    m_pSBVAnchor = new QWidget;
-
-    // Main top to bottom layout.
-    m_pMainLayout = new QVBoxLayout;
-
-    // Sidebar top to bottom layouts.
-    m_pSBELayout = new QVBoxLayout;
-    m_pSBVLayout = new QVBoxLayout;
-
     // Export Interface
-    m_pSBEPlaneLabel = new QLabel(tr("Plane(s) Exported:"));
     m_pSBEPlaneCombo = new QComboBox;
-    m_pSBEStartEndLabel = new QLabel(tr("Start / End Frames:"));
-    m_pSBEStartEndLayout = new QHBoxLayout;
-    m_pSBEStartSpin = new QSpinBox;
-    m_pSBEEndSpin = new QSpinBox;
+    m_pSBEInSpin = new QSpinBox;
+    m_pSBEOutSpin = new QSpinBox;
+    m_pSBEInReset = new QPushButton(tr("Reset In"));
+    m_pSBEOutReset= new QPushButton(tr("Reset Out"));
 
     // Viewer Interface
-    m_pSBVPlaneLabel = new QLabel(tr("Plane(s) Viewed:"));
     m_pSBVPlaneCombo = new QComboBox;
 
     m_pSplitter = new QSplitter(Qt::Horizontal);
@@ -202,23 +134,65 @@ void MainWindow::initObjects(void)
 
     setWindowTitle(tr("YCbCr Lab"));
 
-    setCentralWidget(m_pMainAnchorWidget);
-    centralWidget()->setLayout(m_pMainLayout);
+    QWidget *pAnchor = new QWidget;
+    setCentralWidget(pAnchor);
+
+    QVBoxLayout *pRows = new QVBoxLayout;
+    centralWidget()->setLayout(pRows);
 
     initSidebar();
     m_pSplitter->addWidget(m_pSBToolBox);
     m_pSplitter->addWidget(m_pDSLRLabView);
 
-    m_pMainLayout->addWidget(m_pSplitter);
+    pRows->addWidget(m_pSplitter);
 }
 
 void MainWindow::initSidebar(void)
 {
+    m_pSBToolBox->setMinimumWidth(SIDEBAR_MINIMUM_WIDTH);
+
+    QVBoxLayout *pRows = NULL;
+    QVBoxLayout *pSubRows = NULL;
+    QHBoxLayout *pSubCols = NULL;
+    // Export Interface
+
     // Export Plane Combo Initialization
     m_pSBEPlaneCombo->addItem(tr("Combined RGB"), ffExportDetails::RGB);
     m_pSBEPlaneCombo->addItem(tr("YCbCr"), ffExportDetails::YCbCr);
     m_pSBEPlaneCombo->addItem(tr("Raw Unscaled YCbCr"), ffExportDetails::Raw);
     m_pSBEPlaneCombo->setCurrentIndex(ffExportDetails::RGB);
+
+    QWidget *pAnchor = new QWidget;
+    pRows = new QVBoxLayout;
+    //pRows->setMargin(NOMARGIN);
+    pAnchor->setLayout(pRows);
+
+    m_pSBToolBox->addItem(pAnchor, tr("Export"));
+
+    // Export Planes
+    QGroupBox *pGroupBox = new QGroupBox("Export Planes");
+    pRows->addWidget(pGroupBox);
+    pSubRows = new QVBoxLayout;
+    pGroupBox->setLayout(pSubRows);
+    pSubRows->addWidget(m_pSBEPlaneCombo);
+
+    // In / Out Planes
+    pGroupBox = new QGroupBox("In / Out Frames");
+    pRows->addWidget(pGroupBox);
+    pSubRows = new QVBoxLayout;
+    pGroupBox->setLayout(pSubRows);
+    pSubCols = new QHBoxLayout;
+    pSubRows->addLayout(pSubCols);
+    pSubCols->addWidget(m_pSBEInSpin);
+    pSubCols->addWidget(m_pSBEOutSpin);
+    pSubCols = new QHBoxLayout;
+    pSubRows->addLayout(pSubCols);
+    pSubCols->addWidget(m_pSBEInReset);
+    pSubCols->addWidget(m_pSBEOutReset);
+
+    pRows->addStretch();
+
+    // Viewer Interface
 
     // Viewer Plane Combo Initialization
     m_pSBVPlaneCombo->addItem(tr("Y"), ffViewer::Y);
@@ -227,38 +201,27 @@ void MainWindow::initSidebar(void)
     m_pSBVPlaneCombo->addItem(tr("Combined RGB"), ffViewer::RGB);
     m_pSBVPlaneCombo->setCurrentIndex(ffViewer::Y);
 
-    m_pSBEAnchor->setLayout(m_pSBELayout);
-    m_pSBELayout->setMargin(NOMARGIN);
-    m_pSBVAnchor->setLayout(m_pSBVLayout);
-    m_pSBVLayout->setMargin(NOMARGIN);
+    pAnchor = new QWidget;
+    pRows = new QVBoxLayout;
+    //pRows->setMargin(NOMARGIN);
+    pAnchor->setLayout(pRows);
+    m_pSBToolBox->addItem(pAnchor, tr("Viewer"));
+    pGroupBox = new QGroupBox(tr("Viewer Plane(s)"));
+    pRows->addWidget(pGroupBox);
+    pSubRows = new QVBoxLayout;
+    //pSubRows->setMargin(NOMARGIN);
+    pGroupBox->setLayout(pSubRows);
+    pSubRows->addWidget(m_pSBVPlaneCombo);
+    pRows->addStretch();
 
-    m_pSBToolBox->addItem(m_pSBEAnchor, tr("Export"));
-    m_pSBToolBox->addItem(m_pSBVAnchor, tr("Viewer"));
     m_pSBToolBox->setCurrentIndex(1);
 
-    // Export Interface
-
-    m_pSBELayout->addWidget(m_pSBEPlaneLabel);
-    m_pSBELayout->addWidget(m_pSBEPlaneCombo);
-
-    m_pSBELayout->addWidget(m_pSBEStartEndLabel);
-    QWidget *pSBEStartEndAnchor = new QWidget;
-    m_pSBELayout->addWidget(pSBEStartEndAnchor);
-    m_pSBEStartEndLayout->setMargin(NOMARGIN);
-    pSBEStartEndAnchor->setLayout(m_pSBEStartEndLayout);
-    m_pSBEStartEndLayout->addWidget(m_pSBEStartSpin);
-    m_pSBEStartEndLayout->addWidget(m_pSBEEndSpin);
-    m_pSBELayout->addStretch();
-
-    // Viewer Interface
-    m_pSBVLayout->addWidget(m_pSBVPlaneLabel);
-    m_pSBVLayout->addWidget(m_pSBVPlaneCombo);
-    m_pSBVLayout->addStretch();
-
-    m_pSBToolBox->setMinimumWidth(SIDEBAR_MINIMUM_WIDTH);
-
     connect(m_pSBVPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
-            SLOT(onSidebarViewerPlaneChange(int)));
+            SLOT(onSidebarViewerPlaneChanged(int)));
+    connect(m_pSBEInReset, SIGNAL(clicked()), this, SLOT(onSidebarResetIn()));
+    connect(m_pSBEOutReset, SIGNAL(clicked()), this, SLOT(onSidebarResetOut()));
+    connect(m_pSBEPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(onSidebarExportPlaneChanged(int)));
 }
 
 void MainWindow::createActions(void)
@@ -298,10 +261,27 @@ void MainWindow::createActions(void)
             SLOT(onMenuViewZoom1x()));
     m_pViewActionGroup->addAction(m_pActionViewZoom1x);
 
+    // General Actions
+    m_pActionSetIn  = new QAction(tr("Set &in point"), this);
+    m_pActionSetIn->setShortcut(tr("i"));
+    connect(m_pActionSetIn, SIGNAL(triggered()), this, SLOT(onSidebarSetIn()));
+
+    m_pActionSetOut = new QAction(tr("Set &out point"), this);
+    m_pActionSetOut->setShortcut(tr("o"));
+    connect(m_pActionSetOut, SIGNAL(triggered()), this, SLOT(onSidebarSetOut()));
+
+    m_pActionResetIn = new QAction(tr("Reset in point"), this);
+    m_pActionResetIn->setShortcut(tr("u"));
+    connect(m_pActionResetIn, SIGNAL(triggered()), this, SLOT(onSidebarResetIn()));
+
+    m_pActionResetOut = new QAction(tr("Reset out point"), this);
+    m_pActionResetOut->setShortcut(tr("p"));
+    connect(m_pActionResetOut, SIGNAL(triggered()), this, SLOT(onSidebarResetOut()));
+
     connect(m_pDSLRLabView, SIGNAL(signal_error(QString)), this,
             SLOT(onError(QString)));
-    connect(m_pDSLRLabView, SIGNAL(signal_updateUI(ffSequence::ffSequenceState)), this,
-            SLOT(onUpdateUI(ffSequence::ffSequenceState)));
+    connect(m_pDSLRLabView, SIGNAL(signal_stateChanged(ffSequence::ffSequenceState)), this,
+            SLOT(onStateChanged(ffSequence::ffSequenceState)));
 }
 
 void MainWindow::createMenus(void)
@@ -332,7 +312,7 @@ void MainWindow::onMenuFileOpen()
     }
     catch (std::exception e)
     {
-        onUpdateUI(ffSequence::justErrored);
+        onStateChanged(ffSequence::justErrored);
         throw;
     }
 }
@@ -345,11 +325,11 @@ void MainWindow::onMenuFileExport()
     }
     catch (ffError eff)
     {
-        onUpdateUI(ffSequence::justErrored);
+        onStateChanged(ffSequence::justErrored);
     }
     catch (std::exception e)
     {
-        onUpdateUI(ffSequence::justErrored);
+        onStateChanged(ffSequence::justErrored);
         throw;
     }
 }
@@ -369,11 +349,6 @@ void MainWindow::onMenuViewZoom1x()
 {
     m_pDSLRLabView->resetTransform();
     m_pDSLRLabView->getTextPillItem()->start(tr("Zoom 1x"));
-}
-
-void MainWindow::onSidebarViewerPlaneChange(int plane)
-{
-    m_pDSLRLabView->setViewerPlane((ffViewer::ViewerPlane)plane);
 }
 
 void MainWindow::onOpenFile(QString fileName)
@@ -430,5 +405,99 @@ void MainWindow::onError(QString message)
 
     msgBox.exec();
 
-    onUpdateUI(m_pDSLRLabView->getState());
+    onStateChanged(m_pDSLRLabView->getState());
+}
+
+void MainWindow::onStateChanged(ffSequence::ffSequenceState state)
+{
+    switch (state)
+    {
+    case (ffSequence::justClosed):
+    case (ffSequence::justErrored):
+    case (ffSequence::isInvalid):
+        m_pViewActionGroup->setDisabled(true);
+        m_pActionFileOpen->setEnabled(true);
+        m_pActionFileExport->setDisabled(true);
+        m_pMenuView->setDisabled(true);
+        m_pSBToolBox->setDisabled(true);
+        m_pSBEInSpin->setMinimum(ffDefault::NoFrame);
+        m_pSBEInSpin->setValue(ffDefault::NoFrame);
+        m_pSBEInSpin->setMaximum(ffDefault::NoFrame);
+        m_pSBEOutSpin->setMinimum(ffDefault::NoFrame);
+        m_pSBEOutSpin->setValue(ffDefault::NoFrame);
+        m_pSBEOutSpin->setMaximum(ffDefault::NoFrame);
+        m_pSBToolBox->setEnabled(false);
+        break;
+    case (ffSequence::isLoading):
+    case (ffSequence::justLoading):
+        m_pViewActionGroup->setDisabled(true);
+        m_pActionFileOpen->setDisabled(true);
+        m_pActionFileExport->setDisabled(true);
+        m_pMenuView->setDisabled(true);
+        m_pSBToolBox->setDisabled(true);
+        m_pSBEInSpin->setMinimum(ffDefault::NoFrame);
+        m_pSBEInSpin->setValue(ffDefault::NoFrame);
+        m_pSBEInSpin->setMaximum(ffDefault::NoFrame);
+        m_pSBEOutSpin->setMinimum(ffDefault::NoFrame);
+        m_pSBEOutSpin->setValue(ffDefault::NoFrame);
+        m_pSBEOutSpin->setMaximum(ffDefault::NoFrame);
+        m_pSBToolBox->setEnabled(false);
+        break;
+    case (ffSequence::isValid):
+    case (ffSequence::justOpened):
+        m_pViewActionGroup->setEnabled(true);
+        m_pActionFileOpen->setEnabled(true);
+        m_pActionFileExport->setEnabled(true);
+        m_pMenuView->setEnabled(true);
+        m_pSBEInSpin->setMinimum(ffDefault::FirstFrame);
+        m_pSBEInSpin->setMaximum(m_pDSLRLabView->getTotalFrames());
+        m_pSBEInSpin->setValue(ffDefault::FirstFrame);
+        m_pSBEOutSpin->setMinimum(ffDefault::FirstFrame);
+        m_pSBEOutSpin->setMaximum(m_pDSLRLabView->getTotalFrames());
+        m_pSBEOutSpin->setValue(m_pDSLRLabView->getTotalFrames());
+        m_pSBToolBox->setEnabled(true);
+        break;
+    }
+}
+
+void MainWindow::onTrimChanged(ffTrim trim, void *sender)
+{
+}
+
+void MainWindow::onFrameChanged(long frame, void *sender)
+{
+}
+
+void MainWindow::onSidebarViewerPlaneChanged(int plane)
+{
+    m_pDSLRLabView->setViewerPlane((ffViewer::ViewerPlane)plane);
+}
+
+void MainWindow::onSidebarExportPlaneChanged(int plane)
+{
+    // Pass
+}
+
+void MainWindow::onSidebarSetIn(void)
+{
+    if (((m_pSBEInSpin->value() != m_pDSLRLabView->getCurrentFrame())) &&
+        (m_pSBEInSpin->value() <= m_pSBEOutSpin->value()))
+    {
+            m_pSBEInSpin->setValue(m_pDSLRLabView->getCurrentFrame());
+    }
+}
+
+void MainWindow::onSidebarSetOut(void)
+{
+
+}
+
+void MainWindow::onSidebarResetIn(void)
+{
+
+}
+
+void MainWindow::onSidebarResetOut(void)
+{
+
 }

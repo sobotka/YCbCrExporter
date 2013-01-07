@@ -49,6 +49,11 @@ signals:
     void signal_justClosed(void);
     void signal_justErrored(void);
 
+    // setFunction() Events
+    void signal_onExportTrimChanged(ffTrim, void*);
+    void signal_onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
+    void signal_onFrameChanged(long, void *);
+
 private:
     void onProgressStart(void);
     void onProgress(double);
@@ -57,6 +62,9 @@ private:
     void onJustOpened(void);
     void onJustClosed(void);
     void onJustErrored(void);
+    void onExportTrimChanged(ffTrim, void *);
+    void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
+    void onFrameChanged(long, void *);
 
 public:
     explicit QffSequence(QWidget *parent = 0) :
@@ -72,10 +80,15 @@ public:
     ~DSLRLabView();
 
     void resetTransform(void);
-    void updateCurrentFrame(long);
     void fitToView(void);
 
     long getTotalFrames(void);
+    long getCurrentFrame(void);
+    void setCurrentFrame(long, void *sender);
+    void setInFrame(long);
+    void setOutFrame(long);
+    void ResetInFrame(void);
+    void ResetOutFrame(void);
     QString getFileURI(void);
 
     ffViewer::ViewerPlane getViewerPlane(void);
@@ -91,14 +104,18 @@ public:
     QTextPill* getTextPillItem(void);
 
 signals:
-    void signal_frameChanged(long);
+    void signal_frameChange(long, void *);
+    void signal_trimChange(ffTrim, void *);
     void signal_error(QString);
-    void signal_updateUI(ffSequence::ffSequenceState);
+    void signal_stateChanged(ffSequence::ffSequenceState);
 
 public slots:
+    void onSliderChanged(int);
     void onScaleTimeslice(qreal x);
     void onScaleAnimFinished(void);
     void onError(QString);
+
+    // ffSequence Events
     void onProgressStart(void);
     void onProgress(double);
     void onProgressEnd(void);
@@ -107,8 +124,12 @@ public slots:
     void onJustOpened(void);
     void onJustClosed(void);
     void onJustErrored(void);
-    void onUpdateUI(ffSequence::ffSequenceState);
-    void onFrameChange(int);
+    void onStateChanged(ffSequence::ffSequenceState);
+
+    // ffSequence setFunction Events
+    void onFrameChanged(long, void *);
+    void onExportTrimChanged(ffTrim, void *);
+    void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
 
 private:
     QGraphicsAnchorLayout                  *m_pGraphicsAnchorLayout;
@@ -146,7 +167,6 @@ private:
 
     long                                    m_exportStart;
     long                                    m_exportEnd;
-    ffExportDetails::ExportPlane           m_exportPlane;
 
     int                                     m_numScheduledScalings;
     int                                     m_targetProgress;

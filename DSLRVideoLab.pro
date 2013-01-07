@@ -28,3 +28,5 @@ HEADERS  += mainwindow.h \
 unix|win32: LIBS += -lavformat
 
 unix:!symbian|win32: LIBS += -lOpenImageIO
+
+RESOURCES +=

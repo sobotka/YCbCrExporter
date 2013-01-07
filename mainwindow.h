@@ -60,32 +60,26 @@ private slots:
     void onOpenFile(QString);
     void onExport(QString, long, long);
     void onError(QString);
-    void onUpdateUI(ffSequence::ffSequenceState);
+    void onStateChanged(ffSequence::ffSequenceState);
+    void onTrimChanged(ffTrim, void *);
+    void onFrameChanged(long, void *);
 
-    void onSidebarViewerPlaneChange(int);
+    void onSidebarViewerPlaneChanged(int);
+    void onSidebarExportPlaneChanged(int);
+    void onSidebarSetIn(void);
+    void onSidebarSetOut(void);
+    void onSidebarResetIn(void);
+    void onSidebarResetOut(void);
 
 private:
-    // Layouts
-    QVBoxLayout                            *m_pMainLayout;
-    QVBoxLayout                            *m_pSBELayout;
-    QVBoxLayout                            *m_pSBVLayout;
-
-    // Widgets
-    QWidget                                *m_pMainAnchorWidget;
-
-    QWidget                                *m_pSBEAnchor;
-    QWidget                                *m_pSBVAnchor;
-
     QToolBox                               *m_pSBToolBox;
 
-    QLabel                                 *m_pSBEPlaneLabel;
     QComboBox                              *m_pSBEPlaneCombo;
-    QLabel                                 *m_pSBEStartEndLabel;
-    QHBoxLayout                            *m_pSBEStartEndLayout;
-    QSpinBox                               *m_pSBEStartSpin;
-    QSpinBox                               *m_pSBEEndSpin;
+    QSpinBox                               *m_pSBEInSpin;
+    QSpinBox                               *m_pSBEOutSpin;
+    QPushButton                            *m_pSBEInReset;
+    QPushButton                            *m_pSBEOutReset;
 
-    QLabel                                 *m_pSBVPlaneLabel;
     QComboBox                              *m_pSBVPlaneCombo;
 
     DSLRLabView                            *m_pDSLRLabView;
@@ -100,6 +94,10 @@ private:
     QAction                                *m_pActionFileQuit;
     QAction                                *m_pActionViewFitToView;
     QAction                                *m_pActionViewZoom1x;
+    QAction                                *m_pActionSetIn;
+    QAction                                *m_pActionSetOut;
+    QAction                                *m_pActionResetIn;
+    QAction                                *m_pActionResetOut;
 
     // Menus
     QMenu                                  *m_pMenuFile;

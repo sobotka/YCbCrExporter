@@ -1,5 +1,13 @@
 = YCbCr Lab =
 
+== User Interface ==
+It is hoped that the user interface is as discoverable as possible for artists. The following is a list of existing hotkeys:
+
+	~:	Scale to fit view
+	1:	Scale to 1:1 pixel view
+	i:	Set export trim in to current frame
+	o:	Set export trim out to current frame
+
 == Intended Audience ==
 Filmmakers and artists interested in extracting the highest possible quality from their Y'Cb'Cr' based footage.
 

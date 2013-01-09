@@ -227,8 +227,8 @@ void MainWindow::initSidebar(void)
     connect(m_pSBEPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
             SLOT(onSidebarExportPlaneChanged(int)));
     connect(m_pDSLRLabView->getQffSequence(),
-            SIGNAL(signal_exportTrimChanged(ffTrim,void*)), this,
-            SLOT(onTrimChanged(ffTrim,void*)));
+            SIGNAL(signal_exportTrimChanged(long,long,void*)), this,
+            SLOT(onTrimChanged(long,long,void*)));
     connect(m_pSBEInReset, SIGNAL(clicked()), this, SLOT(onSidebarResetIn()));
     connect(m_pSBEOutReset, SIGNAL(clicked()), this, SLOT(onSidebarResetOut()));
 }
@@ -458,25 +458,17 @@ void MainWindow::onStateChanged(ffSequence::ffSequenceState state)
         m_pActionFileOpen->setEnabled(true);
         m_pActionFileExport->setEnabled(true);
         m_pMenuView->setEnabled(true);
-        m_pSBEInSpin->setMinimum(ffDefault::FirstFrame);
-        m_pSBEInSpin->setMaximum(m_pDSLRLabView->getTotalFrames());
-        m_pSBEInSpin->setValue(ffDefault::FirstFrame);
-        m_pSBEOutSpin->setMinimum(ffDefault::FirstFrame);
-        m_pSBEOutSpin->setMaximum(m_pDSLRLabView->getTotalFrames());
-        m_pSBEOutSpin->setValue(m_pDSLRLabView->getTotalFrames());
         m_pSBToolBox->setEnabled(true);
         break;
     }
 }
 
-void MainWindow::onTrimChanged(ffTrim trim, void */*sender*/)
+void MainWindow::onTrimChanged(long in, long out, void */*sender*/)
 {
-    // TODO: Deal with current frame and in / out not reaching beyond, and
-    // update the current frame accordingly.
-    m_pSBEInSpin->setMinimum(trim.m_in);
-    m_pSBEInSpin->setValue(trim.m_in);
-    m_pSBEOutSpin->setMaximum(trim.m_out);
-    m_pSBEOutSpin->setValue(trim.m_out);
+    m_pSBEInSpin->setRange(ffDefault::FirstFrame, out);
+    m_pSBEOutSpin->setRange(in, m_pDSLRLabView->getTotalFrames());
+    m_pSBEInSpin->setValue(in);
+    m_pSBEOutSpin->setValue(out);
 }
 
 void MainWindow::onFrameChanged(long frame, void */*sender*/)
@@ -504,17 +496,15 @@ void MainWindow::onSidebarSetIn(int in)
 void MainWindow::onSidebarSetOut(int out)
 {
     // Let the lower level ffSequence object test for validity.
-    m_pDSLRLabView->getQffSequence()->setExportTrimOut(out, this);
+   m_pDSLRLabView->getQffSequence()->setExportTrimOut(out, this);
 }
 
 void MainWindow::onSidebarResetIn(void)
 {
-   m_pDSLRLabView->getQffSequence()->setExportTrimIn(
-                ffDefault::FirstFrame, this);
+    m_pDSLRLabView->getQffSequence()->resetExportTrimIn(this);
 }
 
 void MainWindow::onSidebarResetOut(void)
 {
-    m_pDSLRLabView->getQffSequence()->setExportTrimOut(
-                m_pDSLRLabView->getTotalFrames(), this);
+    m_pDSLRLabView->getQffSequence()->resetExportTrimOut(this);
 }

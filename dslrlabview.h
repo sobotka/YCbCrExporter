@@ -53,7 +53,7 @@ signals:
     void signal_justErrored(void);
 
     // setFunction() Events
-    void signal_exportTrimChanged(ffTrim, void*);
+    void signal_exportTrimChanged(long, long, void*);
     void signal_exportPlaneChanged(ffExportDetails::ExportPlane, void *);
     void signal_frameChanged(long, void *);
 
@@ -65,7 +65,7 @@ private:
     void onJustOpened(void);
     void onJustClosed(void);
     void onJustErrored(void);
-    void onExportTrimChanged(ffTrim, void *);
+    void onExportTrimChanged(long, long, void *);
     void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
     void onFrameChanged(long, void *);
 
@@ -93,10 +93,6 @@ public:
     long getTotalFrames(void);
     long getCurrentFrame(void);
     void setCurrentFrame(long, void *sender);
-    void setInFrame(long);
-    void setOutFrame(long);
-    void ResetInFrame(void);
-    void ResetOutFrame(void);
     QString getFileURI(void);
 
     ffViewer::ViewerPlane getViewerPlane(void);
@@ -113,7 +109,7 @@ public:
 
 signals:
     void signal_frameChange(long, void *);
-    void signal_trimChange(ffTrim, void *);
+    void signal_trimChange(long, long, void *);
     void signal_error(QString);
     void signal_stateChanged(ffSequence::ffSequenceState);
 
@@ -136,7 +132,7 @@ public slots:
 
     // ffSequence setFunction Events
     void onFrameChanged(long, void *);
-    void onExportTrimChanged(ffTrim, void *);
+    void onExportTrimChanged(long in, long out, void *);
     void onExportTrimInPressed(void);
     void onExportTrimOutPressed(void);
 

@@ -214,7 +214,6 @@ private:
 
 public:
     ffExportDetails(void);
-    void init(ffSequence *);
     void deinit(void);
 
     ffSize getExportSize(void);
@@ -289,8 +288,15 @@ public:
     void setExportTrimIn(long, void *);
     void setExportTrimOut(long, void *);
     void setExportPlane(ffExportDetails::ExportPlane, void *);
+    void setExportDimensions(long, long, void*);
+    void resetExportTrim(void *);
+    void resetExportTrimIn(void *);
+    void resetExportTrimOut(void *);
+
     ffTrim getExportTrim(void);
     ffExportDetails::ExportPlane getExportPlane(void);
+    ffSize getExportDimensions(void);
+
     ffSize getLumaSize(void);
     ffSize getChromaSize(void);
     ffSequenceState getState(void);
@@ -308,8 +314,9 @@ public:
     // The following are events generated via set* functions. Beware, all
     // objects that set should include themselves in the sender and assert
     // that correct action is taken to avoid recursive loops.
-    virtual void onExportTrimChanged(ffTrim, void *);
+    virtual void onExportTrimChanged(long, long, void *);
     virtual void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
+    virtual void onExportDimensionsChanged(long, long, void*);
     virtual void onFrameChanged(long, void *);
 };
 #endif // FFSEQUENCE_H

@@ -41,17 +41,6 @@ ffExportDetails::ffExportDetails(void) :
 {
 }
 
-void ffExportDetails::init(ffSequence *pSeq)
-{
-    if (pSeq != NULL)
-    {
-        m_exportSize.m_width = pSeq->getLumaSize().m_width;
-        m_exportSize.m_height = pSeq->getLumaSize().m_height;
-        m_trim.m_in = ffDefault::FirstFrame;
-        m_trim.m_out = pSeq->getTotalFrames();
-    }
-}
-
 void ffExportDetails::deinit(void)
 {
     m_exportSize.m_width = 0;
@@ -396,7 +385,8 @@ void ffSequence::readFile(char *fileName)
         m_state = isValid;
         m_fileURI = fileName;
         setCurrentFrame(ffDefault::FirstFrame, this);
-        m_pExportDetails->init(this);
+        setExportDimensions(m_lumaSize.m_width, m_lumaSize.m_height, this);
+        setExportTrim(ffDefault::FirstFrame, getTotalFrames(), this);
         onProgressEnd();
         onJustOpened();
     }
@@ -482,36 +472,64 @@ long ffSequence::getTotalFrames(void)
 void ffSequence::setExportTrim(long in, long out, void *sender)
 {
     if ((getState() == isValid) &&
-            ((in > getCurrentFrame()) || (out < getCurrentFrame())))
+            ((in < ffDefault::FirstFrame) || (out > getTotalFrames())))
         throw ffError("(in > getCurrentFrame()) || (out < getCurrentFrame())",
                       ffError::ERROR_BAD_TRIM);
     else
     {
-        ffTrim trim = getExportTrim();
-        if (!((in == trim.m_in) && (out == trim.m_out)))
+        if (!((in == getExportTrim().m_in) && (out == getExportTrim().m_out)))
         {
             m_pExportDetails->setTrim(in, out);
-            onExportTrimChanged(getExportTrim(), sender);
+            onExportTrimChanged(getExportTrim().m_in,
+                                getExportTrim().m_out, sender);
         }
     }
 }
 
 void ffSequence::setExportTrimIn(long in, void *sender)
 {
-    setExportTrim(in, m_pExportDetails->getTrim().m_out, sender);
+    setExportTrim(in, getExportTrim().m_out, sender);
 }
 
 void ffSequence::setExportTrimOut(long out, void *sender)
 {
-    setExportTrim(m_pExportDetails->getTrim().m_in, out, sender);
+    setExportTrim(getExportTrim().m_in, out, sender);
 }
 
-void ffSequence::setExportPlane(ffExportDetails::ExportPlane plane, void *sender)
+void ffSequence::resetExportTrim(void *sender)
+{
+    setExportTrim(ffDefault::FirstFrame, getTotalFrames(), sender);
+}
+
+void ffSequence::resetExportTrimIn(void *sender)
+{
+    setExportTrim(ffDefault::FirstFrame, getExportTrim().m_out, sender);
+}
+
+void ffSequence::resetExportTrimOut(void *sender)
+{
+    setExportTrim(getExportTrim().m_in, getTotalFrames(), sender);
+}
+
+void ffSequence::setExportPlane(ffExportDetails::ExportPlane plane,
+                                void *sender)
 {
     if (plane != getExportPlane())
     {
         m_pExportDetails->setExportPlane(plane);
         onExportPlaneChanged(getExportPlane(), sender);
+    }
+}
+
+void ffSequence::setExportDimensions(long width, long height, void *sender)
+{
+    if (!((width == getExportDimensions().m_width) &&
+          (height == getExportDimensions().m_height)))
+    {
+        m_pExportDetails->setExportSize(ffSize(width, height));
+        onExportDimensionsChanged(getExportDimensions().m_width,
+                                  getExportDimensions().m_height,
+                                  sender);
     }
 }
 
@@ -523,6 +541,11 @@ ffTrim ffSequence::getExportTrim(void)
 ffExportDetails::ExportPlane ffSequence::getExportPlane()
 {
     return m_pExportDetails->getExportPlane();
+}
+
+ffSize ffSequence::getExportDimensions()
+{
+    return m_pExportDetails->getExportSize();
 }
 
 ffSize ffSequence::getLumaSize(void)
@@ -580,12 +603,17 @@ void ffSequence::onJustErrored(void)
     // Pass
 }
 
-void ffSequence::onExportTrimChanged(ffTrim, void *)
+void ffSequence::onExportTrimChanged(long, long, void *)
 {
     // Pass
 }
 
 void ffSequence::onExportPlaneChanged(ffExportDetails::ExportPlane, void *)
+{
+    // Pass
+}
+
+void ffSequence::onExportDimensionsChanged(long, long, void *)
 {
     // Pass
 }

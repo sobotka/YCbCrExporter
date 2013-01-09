@@ -61,7 +61,7 @@ private slots:
     void onExport(QString, long, long);
     void onError(QString);
     void onStateChanged(ffSequence::ffSequenceState);
-    void onTrimChanged(ffTrim, void *);
+    void onTrimChanged(long, long, void *);
     void onFrameChanged(long, void *);
 
     void onSidebarViewerPlaneChanged(int);

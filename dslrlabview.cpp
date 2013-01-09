@@ -38,9 +38,9 @@ void QffSequence::onJustErrored(void)
     emit signal_justErrored();
 }
 
-void QffSequence::onExportTrimChanged(ffTrim trim, void *sender)
+void QffSequence::onExportTrimChanged(long in, long out, void *sender)
 {
-    emit signal_exportTrimChanged(trim, sender);
+    emit signal_exportTrimChanged(in, out, sender);
 }
 
 void QffSequence::onExportPlaneChanged(ffExportDetails::ExportPlane plane,
@@ -132,8 +132,10 @@ void DSLRLabView::initObjects(void)
 
     connect(m_pTimeLine, SIGNAL(valueChanged(qreal)),
             SLOT(onScaleTimeslice(qreal)));
-    connect(m_pTimeLine, SIGNAL(finished()), SLOT(onScaleAnimFinished()));
-    connect(this, SIGNAL(signal_error(QString)), this, SLOT(onError(QString)));
+    connect(m_pTimeLine, SIGNAL(finished()),
+            SLOT(onScaleAnimFinished()));
+    connect(this, SIGNAL(signal_error(QString)), this,
+            SLOT(onError(QString)));
     connect(m_pffSequence, SIGNAL(signal_progressStart()), this,
             SLOT(onProgressStart()));
     connect(m_pffSequence, SIGNAL(signal_progress(double)), this,
@@ -154,8 +156,9 @@ void DSLRLabView::initObjects(void)
             SLOT(onSliderChanged(long)));
     connect(m_pffSequence, SIGNAL(signal_frameChanged(long,void*)), this,
             SLOT(onFrameChanged(long,void*)));
-    connect(m_pffSequence, SIGNAL(signal_exportTrimChanged(ffTrim,void*)),
-            this, SLOT(onExportTrimChanged(ffTrim,void*)));
+    connect(m_pffSequence,
+            SIGNAL(signal_exportTrimChanged(long,long,void*)),
+            this, SLOT(onExportTrimChanged(long,long,void*)));
     connect(m_pShortcutTrimIn, SIGNAL(activated()), this,
             SLOT(onExportTrimInPressed()));
     connect(m_pShortcutTrimOut, SIGNAL(activated()), this,
@@ -163,8 +166,10 @@ void DSLRLabView::initObjects(void)
     connect(m_pffSequence, SIGNAL(
                 signal_exportPlaneChanged(
                     ffExportDetails::ExportPlane,void*)), this,
-            SLOT(onExportPlaneChanged(ffExportDetails::ExportPlane,void*)));
-    connect(this, SIGNAL(signal_stateChanged(ffSequence::ffSequenceState)),
+            SLOT(onExportPlaneChanged(
+                     ffExportDetails::ExportPlane,void*)));
+    connect(this, SIGNAL(signal_stateChanged(
+                             ffSequence::ffSequenceState)),
             this, SLOT(onStateChanged(ffSequence::ffSequenceState)));
 
     m_pGraphicsViewOverlay->viewport()->installEventFilter(
@@ -174,21 +179,22 @@ void DSLRLabView::initObjects(void)
 void DSLRLabView::createAnimations(void)
 {
     m_pFadePixmap = new QGraphicsOpacityEffect;
-    m_pFadePixmapAnimation = new QPropertyAnimation(m_pFadePixmap, "opacity");
+    m_pFadePixmapAnimation = new QPropertyAnimation(m_pFadePixmap,
+                                                    "opacity");
     m_pFadePixmapAnimation->setDuration(DSLRVIEW_DURATION_INTROFADEIN);
     m_pFadePixmapAnimation->setStartValue(DSLRVIEW_TRANSPARENT);
     m_pFadePixmapAnimation->setEndValue(DSLRVIEW_OPAQUE);
 
     m_pFadeProgressBar = new QGraphicsOpacityEffect;
-    m_pFadeProgressBarAnimation = new QPropertyAnimation(m_pFadeProgressBar,
-                                                         "opacity");
+    m_pFadeProgressBarAnimation =
+            new QPropertyAnimation(m_pFadeProgressBar, "opacity");
     m_pFadeProgressBarAnimation->setDuration(PROGRESS_FADE_DURATION);
     m_pFadeProgressBarAnimation->setStartValue(DSLRVIEW_TRANSPARENT);
     m_pFadeProgressBarAnimation->setEndValue(DSLRVIEW_OPAQUE);
 
     m_pFadeFrameScrubber = new QGraphicsOpacityEffect;
-    m_pFadeFrameScrubberAnimation = new QPropertyAnimation(m_pFadeFrameScrubber,
-                                                           "opacity");
+    m_pFadeFrameScrubberAnimation =
+            new QPropertyAnimation(m_pFadeFrameScrubber, "opacity");
     m_pFadeFrameScrubberAnimation->setDuration(PROGRESS_FADE_DURATION);
     m_pFadeFrameScrubberAnimation->setStartValue(DSLRVIEW_TRANSPARENT);
     m_pFadeFrameScrubberAnimation->setEndValue(SLIDER_OPACITY);
@@ -237,29 +243,6 @@ long DSLRLabView::getCurrentFrame(void)
 void DSLRLabView::setCurrentFrame(long frame, void *sender)
 {
     m_pffSequence->setCurrentFrame(frame, sender);
-}
-
-void DSLRLabView::setInFrame(long in)
-{
-    m_pSlider->setMinimum(in);
-    // TODO UPDATE EXPORTDETAILS
-}
-
-void DSLRLabView::setOutFrame(long out)
-{
-    m_pSlider->setMaximum(out);
-    // TODO UPDATE EXPORT DETAILS
-
-}
-
-void DSLRLabView::ResetInFrame(void)
-{
-    setInFrame(ffDefault::FirstFrame);
-}
-
-void DSLRLabView::ResetOutFrame(void)
-{
-    setOutFrame(m_pffSequence->getTotalFrames());
 }
 
 QString DSLRLabView::getFileURI(void)
@@ -545,12 +528,27 @@ void DSLRLabView::onFrameChanged(long frame, void */*sender*/)
                        QString::number(m_pffSequence->getCurrentFrame()));
 }
 
-void DSLRLabView::onExportTrimChanged(ffTrim trim, void *)
+void DSLRLabView::onExportTrimChanged(long in, long out, void *)
 {
-    if (getState() != ffSequence::justOpened)
-    m_pTextPill->start(tr("In(") + QString::number(trim.m_in) + tr(") Out(") +
-                       QString::number(trim.m_out) + tr(")"));
-    m_pSlider->setTrim(trim);
+    if ((in != m_pSlider->getTrim().m_in) &&
+            (out != m_pSlider->getTrim().m_out))
+    {
+        if (in != m_pSlider->getTrim().m_in)
+            m_pTextPill->start(tr("Export trim in and out updated to ") +
+                               QString::number(in) + ":" +
+                               QString::number(out));
+    }
+        else if (in != m_pSlider->getTrim().m_in)
+    {
+            m_pTextPill->start(tr("Export trim in updated to ") +
+                               QString::number(in));
+    }
+        else
+    {
+            m_pTextPill->start(tr("Export trim out updated to ") +
+                               QString::number(out));
+    }
+    m_pSlider->setTrim(in, out);
 }
 
 void DSLRLabView::onExportTrimInPressed()

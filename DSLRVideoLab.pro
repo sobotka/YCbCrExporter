@@ -17,16 +17,21 @@ SOURCES += main.cpp\
     dslrlabview.cpp \
     ffsequence.cpp \
     textpill.cpp \
-    qbasegraphicsview.cpp
+    qbasegraphicsview.cpp \
+    qgraphicstrimslider.cpp
 
 HEADERS  += mainwindow.h \
     dslrlabview.h \
     ffsequence.h \
     textpill.h \
-    qbasegraphicsview.h
+    qbasegraphicsview.h \
+    qgraphicstrimslider.h
 
 unix|win32: LIBS += -lavformat
 
 unix:!symbian|win32: LIBS += -lOpenImageIO
 
 RESOURCES +=
+
+OTHER_FILES += \
+    TODO.txt

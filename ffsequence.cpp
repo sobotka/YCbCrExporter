@@ -481,7 +481,8 @@ long ffSequence::getTotalFrames(void)
 
 void ffSequence::setExportTrim(long in, long out, void *sender)
 {
-    if ((in > getCurrentFrame()) || (out < getCurrentFrame()))
+    if ((getState() == isValid) &&
+            ((in > getCurrentFrame()) || (out < getCurrentFrame())))
         throw ffError("(in > getCurrentFrame()) || (out < getCurrentFrame())",
                       ffError::ERROR_BAD_TRIM);
     else

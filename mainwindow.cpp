@@ -220,8 +220,17 @@ void MainWindow::initSidebar(void)
             SLOT(onSidebarViewerPlaneChanged(int)));
     connect(m_pSBEInReset, SIGNAL(clicked()), this, SLOT(onSidebarResetIn()));
     connect(m_pSBEOutReset, SIGNAL(clicked()), this, SLOT(onSidebarResetOut()));
+    connect(m_pSBEInSpin, SIGNAL(valueChanged(int)), this,
+            SLOT(onSidebarSetIn(int)));
+    connect(m_pSBEOutSpin, SIGNAL(valueChanged(int)), this,
+            SLOT(onSidebarSetOut(int)));
     connect(m_pSBEPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
             SLOT(onSidebarExportPlaneChanged(int)));
+    connect(m_pDSLRLabView->getQffSequence(),
+            SIGNAL(signal_exportTrimChanged(ffTrim,void*)), this,
+            SLOT(onTrimChanged(ffTrim,void*)));
+    connect(m_pSBEInReset, SIGNAL(clicked()), this, SLOT(onSidebarResetIn()));
+    connect(m_pSBEOutReset, SIGNAL(clicked()), this, SLOT(onSidebarResetOut()));
 }
 
 void MainWindow::createActions(void)
@@ -262,21 +271,21 @@ void MainWindow::createActions(void)
     m_pViewActionGroup->addAction(m_pActionViewZoom1x);
 
     // General Actions
-    m_pActionSetIn  = new QAction(tr("Set &in point"), this);
-    m_pActionSetIn->setShortcut(tr("i"));
-    connect(m_pActionSetIn, SIGNAL(triggered()), this, SLOT(onSidebarSetIn()));
+//    m_pActionSetIn  = new QAction(tr("Set &in point"), this);
+//    m_pActionSetIn->setShortcut(tr("i"));
+//    connect(m_pActionSetIn, SIGNAL(triggered()), this, SLOT(onSidebarSetIn()));
 
-    m_pActionSetOut = new QAction(tr("Set &out point"), this);
-    m_pActionSetOut->setShortcut(tr("o"));
-    connect(m_pActionSetOut, SIGNAL(triggered()), this, SLOT(onSidebarSetOut()));
+//    m_pActionSetOut = new QAction(tr("Set &out point"), this);
+//    m_pActionSetOut->setShortcut(tr("o"));
+//    connect(m_pActionSetOut, SIGNAL(triggered()), this, SLOT(onSidebarSetOut()));
 
-    m_pActionResetIn = new QAction(tr("Reset in point"), this);
-    m_pActionResetIn->setShortcut(tr("u"));
-    connect(m_pActionResetIn, SIGNAL(triggered()), this, SLOT(onSidebarResetIn()));
+//    m_pActionResetIn = new QAction(tr("Reset in point"), this);
+//    m_pActionResetIn->setShortcut(tr("u"));
+//    connect(m_pActionResetIn, SIGNAL(triggered()), this, SLOT(onSidebarResetIn()));
 
-    m_pActionResetOut = new QAction(tr("Reset out point"), this);
-    m_pActionResetOut->setShortcut(tr("p"));
-    connect(m_pActionResetOut, SIGNAL(triggered()), this, SLOT(onSidebarResetOut()));
+//    m_pActionResetOut = new QAction(tr("Reset out point"), this);
+//    m_pActionResetOut->setShortcut(tr("p"));
+//    connect(m_pActionResetOut, SIGNAL(triggered()), this, SLOT(onSidebarResetOut()));
 
     connect(m_pDSLRLabView, SIGNAL(signal_error(QString)), this,
             SLOT(onError(QString)));
@@ -460,12 +469,20 @@ void MainWindow::onStateChanged(ffSequence::ffSequenceState state)
     }
 }
 
-void MainWindow::onTrimChanged(ffTrim trim, void *sender)
+void MainWindow::onTrimChanged(ffTrim trim, void */*sender*/)
 {
+    // TODO: Deal with current frame and in / out not reaching beyond, and
+    // update the current frame accordingly.
+    m_pSBEInSpin->setMinimum(trim.m_in);
+    m_pSBEInSpin->setValue(trim.m_in);
+    m_pSBEOutSpin->setMaximum(trim.m_out);
+    m_pSBEOutSpin->setValue(trim.m_out);
 }
 
-void MainWindow::onFrameChanged(long frame, void *sender)
+void MainWindow::onFrameChanged(long frame, void */*sender*/)
 {
+    m_pSBEInSpin->setMaximum(frame);
+    m_pSBEOutSpin->setMinimum(frame);
 }
 
 void MainWindow::onSidebarViewerPlaneChanged(int plane)
@@ -475,29 +492,29 @@ void MainWindow::onSidebarViewerPlaneChanged(int plane)
 
 void MainWindow::onSidebarExportPlaneChanged(int plane)
 {
-    // Pass
+    m_pSBEPlaneCombo->setCurrentIndex((ffExportDetails::ExportPlane)plane);
 }
 
-void MainWindow::onSidebarSetIn(void)
+void MainWindow::onSidebarSetIn(int in)
 {
-    if (((m_pSBEInSpin->value() != m_pDSLRLabView->getCurrentFrame())) &&
-        (m_pSBEInSpin->value() <= m_pSBEOutSpin->value()))
-    {
-            m_pSBEInSpin->setValue(m_pDSLRLabView->getCurrentFrame());
-    }
+    // Let the lower level ffSequence test for validity.
+    m_pDSLRLabView->getQffSequence()->setExportTrimIn(in, this);
 }
 
-void MainWindow::onSidebarSetOut(void)
+void MainWindow::onSidebarSetOut(int out)
 {
-
+    // Let the lower level ffSequence object test for validity.
+    m_pDSLRLabView->getQffSequence()->setExportTrimOut(out, this);
 }
 
 void MainWindow::onSidebarResetIn(void)
 {
-
+   m_pDSLRLabView->getQffSequence()->setExportTrimIn(
+                ffDefault::FirstFrame, this);
 }
 
 void MainWindow::onSidebarResetOut(void)
 {
-
+    m_pDSLRLabView->getQffSequence()->setExportTrimOut(
+                m_pDSLRLabView->getTotalFrames(), this);
 }

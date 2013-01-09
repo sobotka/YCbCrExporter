@@ -1,0 +1,3 @@
+* Add a reset on export details in onStateChanged for DSLRLabView.
+* Add a reset on trim details on QGraphicsTrimProgress. Hook to onStateChanged.
+* Consider adding events for TrimIn and TrimOut for feedback.

@@ -66,8 +66,8 @@ private slots:
 
     void onSidebarViewerPlaneChanged(int);
     void onSidebarExportPlaneChanged(int);
-    void onSidebarSetIn(void);
-    void onSidebarSetOut(void);
+    void onSidebarSetIn(int);
+    void onSidebarSetOut(int);
     void onSidebarResetIn(void);
     void onSidebarResetOut(void);
 

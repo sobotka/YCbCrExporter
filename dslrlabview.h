@@ -7,6 +7,7 @@
 #include "textpill.h"
 #include "ffsequence.h"
 #include "qbasegraphicsview.h"
+#include "qgraphicstrimslider.h"
 
 #define DSLRVIEW_SCALE_INCREMENT                10
 // Default speed of scaling for zooming in and out.
@@ -33,6 +34,8 @@
 #define TEXT_PADDING_X                          DEFAULT_PADDING
 #define TEXT_PADDING_Y                          DEFAULT_PADDING
 
+#define SLIDER_OPACITY                          0.70
+
 #define MAXIMUM_SCALE                           24.00
 #define MINIMUM_SCALE                           0.250
 
@@ -50,9 +53,9 @@ signals:
     void signal_justErrored(void);
 
     // setFunction() Events
-    void signal_onExportTrimChanged(ffTrim, void*);
-    void signal_onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
-    void signal_onFrameChanged(long, void *);
+    void signal_exportTrimChanged(ffTrim, void*);
+    void signal_exportPlaneChanged(ffExportDetails::ExportPlane, void *);
+    void signal_frameChanged(long, void *);
 
 private:
     void onProgressStart(void);
@@ -76,6 +79,11 @@ class DSLRLabView : public QWidget
     Q_OBJECT
 
 public:
+    enum Default
+    {
+        SliderPadding = 10
+    };
+
     explicit DSLRLabView(QWidget *parent = 0);
     ~DSLRLabView();
 
@@ -110,7 +118,7 @@ signals:
     void signal_stateChanged(ffSequence::ffSequenceState);
 
 public slots:
-    void onSliderChanged(int);
+    void onSliderChanged(long);
     void onScaleTimeslice(qreal x);
     void onScaleAnimFinished(void);
     void onError(QString);
@@ -129,6 +137,9 @@ public slots:
     // ffSequence setFunction Events
     void onFrameChanged(long, void *);
     void onExportTrimChanged(ffTrim, void *);
+    void onExportTrimInPressed(void);
+    void onExportTrimOutPressed(void);
+
     void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
 
 private:
@@ -160,18 +171,18 @@ private:
     QProgressBar                           *m_pProgressBar;
     QGraphicsWidget                        *m_pgwProgressBar;
     QTextPill                              *m_pTextPill;
-    QSlider                                *m_pSlider;
-    QGraphicsWidget                        *m_pgwSlider;
+    QGraphicsTrimSlider                    *m_pSlider;
 
     ffViewer::ViewerPlane                  m_viewerPlane;
 
-    long                                    m_exportStart;
-    long                                    m_exportEnd;
+    QShortcut                              *m_pShortcutTrimIn;
+    QShortcut                              *m_pShortcutTrimOut;
 
     int                                     m_numScheduledScalings;
     int                                     m_targetProgress;
 
     void createObjects(void);
+    void createActions(void);
     void createAnimations(void);
 
     void initObjects(void);

@@ -34,4 +34,5 @@ unix:!symbian|win32: LIBS += -lOpenImageIO
 RESOURCES +=
 
 OTHER_FILES += \
-    TODO.txt
+    TODO.txt \
+    LICENSE.txt

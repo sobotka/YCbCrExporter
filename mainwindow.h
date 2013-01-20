@@ -78,9 +78,9 @@ private slots:
     void onMenuViewFitToView();
     void onMenuViewZoom1x();
     void onOpenFile(QString);
-    void onExport(QString, long, long);
+    void onExport(QString);
     void onError(QString);
-    void onStateChanged(ffSequence::ffSequenceState);
+    void onStateChanged(ffSequenceState);
     void onTrimChanged(long, long, void *);
     void onFrameChanged(long, void *);
 
@@ -94,6 +94,8 @@ private slots:
 private:
     QToolBox                               *m_pSBToolBox;
 
+    QPushButton                            *m_pSBEPathButton;
+    QComboBox                              *m_pSBEFileTypeCombo;
     QComboBox                              *m_pSBEPlaneCombo;
     QSpinBox                               *m_pSBEInSpin;
     QSpinBox                               *m_pSBEOutSpin;

@@ -326,11 +326,11 @@ void ffSequence::readFile(char *fileName)
                 break;
             }
         if (m_stream < 0)
-            throw ffError("m_stream < 0", ffError::ERROR_NO_VIDEO_STREAM);
+            throw ffImportError("m_stream < 0", ffError::ERROR_NO_VIDEO_STREAM);
 
         m_pCodecCtx = m_pFormatCtx->streams[m_stream]->codec;
         if (m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P)
-            throw ffError("m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P",
+            throw ffImportError("m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P",
                           ffError::ERROR_BAD_FORMAT);
 
         m_lumaSize = ffSize(m_pCodecCtx->width, m_pCodecCtx->height);
@@ -348,7 +348,7 @@ void ffSequence::readFile(char *fileName)
 
         m_pCodec = avcodec_find_decoder(m_pCodecCtx->codec_id);
         if (m_pCodec == NULL)
-            throw ffError("m_pCodec == NULL", ffError::ERROR_NO_DECODER);
+            throw ffImportError("m_pCodec == NULL", ffError::ERROR_NO_DECODER);
 
         retValue = avcodec_open2(m_pCodecCtx, m_pCodec, NULL);
         if (retValue < 0)
@@ -358,7 +358,7 @@ void ffSequence::readFile(char *fileName)
 
         AVFrame *pTempFrame = avcodec_alloc_frame();
         if (pTempFrame == NULL)
-            throw ffError("avcodec_alloc_frame() == NULL",
+            throw ffImportError("avcodec_alloc_frame() == NULL",
                           ffError::ERROR_ALLOC_ERROR);
 
         ffAVPacket    tempPacket;
@@ -413,24 +413,25 @@ void ffSequence::readFile(char *fileName)
     catch(ffmpegError ffmpegErr)
     {
         cleanup();
-        onJustErrored();
+//        onJustErrored();
         throw;
     }
-    catch(ffError ffErr)
+    catch(ffExportError ffErr)
     {
         cleanup();
-        onJustErrored();
+//        onJustErrored();
         throw;
     }
 }
 
-void ffSequence::writeFile(char *fileName, long /*start*/, long /*end*/)
+void ffSequence::writeFile(char *fileName)
 {
     try
     {
         ImageOutput *imageOutput = ImageOutput::create (fileName);
         if (imageOutput == NULL)
-            throw ffError("imageOutput == NULL", ffError::ERROR_BAD_FILENAME);
+            throw ffExportError("imageOutput == NULL",
+                                ffError::ERROR_BAD_FILENAME);
         ImageSpec imageSpec(m_lumaSize.m_width, m_lumaSize.m_height,
                             1, TypeDesc::UINT8);
 
@@ -440,9 +441,9 @@ void ffSequence::writeFile(char *fileName, long /*start*/, long /*end*/)
         imageOutput->close();
         delete imageOutput;
     }
-    catch (ffError eff)
+    catch (ffExportError eff)
     {
-        onJustErrored();
+//        onJustErrored();
         throw;
     }
 }
@@ -578,7 +579,7 @@ ffSize ffSequence::getChromaSize(void)
     return m_chromaSize;
 }
 
-ffSequence::ffSequenceState ffSequence::getState(void)
+ffSequenceState ffSequence::getState(void)
 {
     return m_state;
 }
@@ -618,10 +619,10 @@ void ffSequence::onJustClosed(void)
     // Pass
 }
 
-void ffSequence::onJustErrored(void)
-{
-    // Pass
-}
+//void ffSequence::onJustErrored(void)
+//{
+//    // Pass
+//}
 
 void ffSequence::onExportTrimChanged(long, long, void *)
 {

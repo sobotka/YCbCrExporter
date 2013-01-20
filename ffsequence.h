@@ -95,6 +95,7 @@ class ffError : public std::runtime_error
 public:
     enum FFError
     {
+        ERROR_BASE_IMPORT,
         ERROR_NO_VIDEO_STREAM,
         ERROR_BAD_FORMAT,
         ERROR_NO_DECODER,
@@ -102,7 +103,8 @@ public:
         ERROR_BAD_FILENAME,
         ERROR_NULL_FILENAME,
         ERROR_BAD_TRIM,
-        ERROR_BAD_FRAME
+        ERROR_BAD_FRAME,
+        ERROR_BASE_EXPORT
     };
 
 private:
@@ -120,6 +122,19 @@ public:
         ffError(what_arg, error) {}
 };
 
+class ffExportError : public ffError
+{
+public:
+    ffExportError(const std::string& what_arg, int error) :
+        ffError(what_arg, error) {}
+};
+
+class ffImportError : public ffError
+{
+public:
+    ffImportError(const std::string& what_arg, int error) :
+        ffError(what_arg, error) {}
+};
 /******************************************************************************
  * ffTrim
  ******************************************************************************/
@@ -224,6 +239,12 @@ public:
         Raw =                               2
     };
 
+    enum ExportFormat
+    {
+        OpenEXR =                           0,
+        JPEG =                              1
+    };
+
 private:
     ffSize                                  m_exportSize;
     ffInterpolator::Type                    m_YInterp;
@@ -254,19 +275,19 @@ public:
 /******************************************************************************
  * ffSequence
  ******************************************************************************/
+enum ffSequenceState
+{
+    isLoading,
+    isValid,
+    isInvalid,
+    justLoading,
+    justOpened,
+    justClosed
+};
+
 class ffSequence
 {
 public:
-    enum ffSequenceState
-    {
-        isLoading,
-        isValid,
-        isInvalid,
-        justLoading,
-        justOpened,
-        justClosed,
-        justErrored
-    };
 
 private:
     AVFormatContext                        *m_pFormatCtx;
@@ -297,7 +318,7 @@ public:
     ~ffSequence();
 
     void readFile(char *fileName);
-    void writeFile(char *, long, long);
+    void writeFile(char *);
     void closeFile(void);
 
     ffRawFrame* getRawFrame(long);
@@ -330,7 +351,7 @@ public:
     virtual void onJustLoading(void);
     virtual void onJustOpened(void);
     virtual void onJustClosed(void);
-    virtual void onJustErrored(void);
+//    virtual void onJustErrored(void);
     // The following are events generated via set* functions. Beware, all
     // objects that set should include themselves in the sender and assert
     // that correct action is taken to avoid recursive loops.

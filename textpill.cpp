@@ -53,7 +53,8 @@ void QTextPill::initObjects(void)
     init();
 }
 
-void QTextPill::init(QString text, bool inverse, int dur, qreal start, qreal end)
+void QTextPill::init(QString text, bool inverse, int dur, qreal start,
+                     qreal end)
 {
     setOpacity(DEFAULT_ENDVALUE);
     setText(text);

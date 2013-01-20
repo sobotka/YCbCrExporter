@@ -56,7 +56,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define SLIDER_OPACITY                          0.70
 
-#define MAXIMUM_SCALE                           24.00
+#define MAXIMUM_SCALE                           100.00
 #define MINIMUM_SCALE                           0.250
 
 class QffSequence : public QObject, public ffSequence
@@ -84,14 +84,13 @@ private:
     void onJustLoading(void);
     void onJustOpened(void);
     void onJustClosed(void);
-    void onJustErrored(void);
+//    void onJustErrored(void);
     void onExportTrimChanged(long, long, void *);
     void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
     void onFrameChanged(long, void *);
 
 public:
-    explicit QffSequence(QWidget *parent = 0) :
-        QObject(parent), ffSequence() {}
+    explicit QffSequence(QWidget *parent = 0);
 };
 
 class DSLRLabView : public QWidget
@@ -118,9 +117,9 @@ public:
     ffViewer::ViewerPlane getViewerPlane(void);
     void setViewerPlane(ffViewer::ViewerPlane);
 
-    ffSequence::ffSequenceState getState(void);
+    ffSequenceState getState(void);
     void openSequence(char *);
-    void saveSequence(char *, long, long);
+    void saveSequence(char *);
     void closeSequence(void);
     QffSequence * getQffSequence(void);
 
@@ -131,13 +130,13 @@ signals:
     void signal_frameChange(long, void *);
     void signal_trimChange(long, long, void *);
     void signal_error(QString);
-    void signal_stateChanged(ffSequence::ffSequenceState);
+    void signal_stateChanged(ffSequenceState);
 
 public slots:
     void onSliderChanged(long);
     void onScaleTimeslice(qreal x);
     void onScaleAnimFinished(void);
-    void onError(QString);
+//    void onError(QString);
 
     // ffSequence Events
     void onProgressStart(void);
@@ -147,8 +146,8 @@ public slots:
     void onJustLoading(void);
     void onJustOpened(void);
     void onJustClosed(void);
-    void onJustErrored(void);
-    void onStateChanged(ffSequence::ffSequenceState);
+//    void onJustErrored(void);
+    void onStateChanged(ffSequenceState);
 
     // ffSequence setFunction Events
     void onFrameChanged(long, void *);

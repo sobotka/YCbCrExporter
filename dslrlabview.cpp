@@ -21,8 +21,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dslrlabview.h"
 
 // *******
-// * progressffSequence
+// * QffSequence
 // *******
+
+QffSequence::QffSequence(QWidget *parent) :
+    QObject(parent), ffSequence()
+{
+    qRegisterMetaType<ffSequenceState>("ffSequenceState");
+}
+
 void QffSequence::onProgressStart(void)
 {
     emit signal_progressStart();
@@ -53,10 +60,10 @@ void QffSequence::onJustClosed(void)
     emit signal_justClosed();
 }
 
-void QffSequence::onJustErrored(void)
-{
-    emit signal_justErrored();
-}
+//void QffSequence::onJustErrored(void)
+//{
+//    emit signal_justErrored();
+//}
 
 void QffSequence::onExportTrimChanged(long in, long out, void *sender)
 {
@@ -154,8 +161,8 @@ void DSLRLabView::initObjects(void)
             SLOT(onScaleTimeslice(qreal)));
     connect(m_pTimeLine, SIGNAL(finished()),
             SLOT(onScaleAnimFinished()));
-    connect(this, SIGNAL(signal_error(QString)), this,
-            SLOT(onError(QString)));
+//    connect(this, SIGNAL(signal_error(QString)), this,
+//            SLOT(onError(QString)));
     connect(m_pffSequence, SIGNAL(signal_progressStart()), this,
             SLOT(onProgressStart()));
     connect(m_pffSequence, SIGNAL(signal_progress(double)), this,
@@ -168,8 +175,8 @@ void DSLRLabView::initObjects(void)
             SLOT(onJustOpened()));
     connect(m_pffSequence, SIGNAL(signal_justClosed()), this,
             SLOT(onJustClosed()));
-    connect(m_pffSequence, SIGNAL(signal_justErrored()), this,
-            SLOT(onJustErrored()));
+//    connect(m_pffSequence, SIGNAL(signal_justErrored()), this,
+//            SLOT(onJustErrored()));
     connect(m_pProgressTimeline, SIGNAL(valueChanged(qreal)), this,
             SLOT(onProgressAnimation(qreal)));
     connect(m_pSlider, SIGNAL(signal_valueChanged(long)), this,
@@ -189,8 +196,8 @@ void DSLRLabView::initObjects(void)
             SLOT(onExportPlaneChanged(
                      ffExportDetails::ExportPlane,void*)));
     connect(this, SIGNAL(signal_stateChanged(
-                             ffSequence::ffSequenceState)),
-            this, SLOT(onStateChanged(ffSequence::ffSequenceState)));
+                             ffSequenceState)),
+            this, SLOT(onStateChanged(ffSequenceState)));
 
     m_pGraphicsViewOverlay->viewport()->installEventFilter(
                 m_pGraphicsViewOverlay);
@@ -277,15 +284,14 @@ ffViewer::ViewerPlane DSLRLabView::getViewerPlane(void)
 
 void DSLRLabView::setViewerPlane(ffViewer::ViewerPlane planeType)
 {
-    if ((getState() == ffSequence::isValid) && (planeType != m_viewerPlane))
+    if ((getState() == isValid) && (planeType != m_viewerPlane))
     {
         m_viewerPlane = planeType;
         emit onFrameChanged(m_pffSequence->getCurrentFrame(), this);
         m_pGraphicsView->setSceneRect(m_pGraphicsPixmapItem->boundingRect());
     }
 }
-
-ffSequence::ffSequenceState DSLRLabView::getState(void)
+ffSequenceState DSLRLabView::getState(void)
 {
     return m_pffSequence->getState();
 }
@@ -294,7 +300,7 @@ void DSLRLabView::openSequence(char *fileName)
 {
     try
     {
-        if (getState() == ffSequence::isValid)
+        if (getState() == isValid)
             closeSequence();
 
         m_pffSequence->readFile(fileName);
@@ -302,40 +308,48 @@ void DSLRLabView::openSequence(char *fileName)
                      m_pffSequence->getLumaSize().m_width,
                      m_pffSequence->getLumaSize().m_height);
     }
-    catch (ffmpegError ffeff)
+    catch (ffmpegError eff)
     {
         char errorC[AV_ERROR_MAX_STRING_SIZE];
-        av_strerror(ffeff.getError(), errorC, AV_ERROR_MAX_STRING_SIZE);
+        av_strerror(eff.getError(), errorC, AV_ERROR_MAX_STRING_SIZE);
 
-        QString message = tr("FFMPEG: ") + QString(ffeff.what()) + " (" +
-                QString(errorC) + ")";
+        QString message = tr("There was an error attempting to open the "
+                             "file. <<FFMPEG: ") + QString(eff.what()) +
+                             " (" + QString(errorC) + ")>>";
+        emit signal_stateChanged(isInvalid);
         emit signal_error(message);
+        throw; // Pass up chain for proper UI handling.
     }
-    catch (ffError eff)
+    catch (ffExportError eff)
     {
-        QString message = tr("FFSEQUENCE: ") + QString(eff.what()) + " (" +
-                QString::number(eff.getError()) + ")";
+        QString message = tr("There was an error attempting to open the "
+                             "file. <<FFERROR: ") + QString(eff.what()) +
+                             " (" + QString::number(eff.getError()) + ")>>";
+        emit signal_stateChanged(isInvalid);
         emit signal_error(message);
+        throw; // Pass up chain for proper UI handling.
     }
 }
 
-void DSLRLabView::saveSequence(char *fileName, long start, long end)
+void DSLRLabView::saveSequence(char *fileName)
 {
     try
     {
-        m_pffSequence->writeFile(fileName, start, end);
+        m_pffSequence->writeFile(fileName);
     }
-    catch (ffError eff)
+    catch (ffExportError eff)
     {
-        QString message = tr("FFSEQUENCE: ") + QString(eff.what()) + " (" +
-                QString::number(eff.getError()) + ")";
+        QString message = tr("There was an error attempting to export. "
+                             "<<FFEXPORTERROR: ") + QString(eff.what()) +
+                             " (" + QString::number(eff.getError()) + ")>>";
         emit signal_error(message);
+        throw; // Pass up chain for proper UI handling.
     }
 }
 
 void DSLRLabView::closeSequence(void)
 {
-    if (getState() == ffSequence::isValid)
+    if (getState() == isValid)
         m_pffSequence->closeFile();
 }
 
@@ -388,10 +402,10 @@ void DSLRLabView::onScaleAnimFinished(void)
         m_numScheduledScalings++;
 }
 
-void DSLRLabView::onError(QString)
-{
-    emit signal_stateChanged(ffSequence::justErrored);
-}
+//void DSLRLabView::onError(QString)
+//{
+////    emit signal_stateChanged(ffSequence::justErrored);
+//}
 
 void DSLRLabView::onProgressStart(void)
 {
@@ -436,31 +450,31 @@ void DSLRLabView::onProgressAnimation(qreal)
 
 void DSLRLabView::onJustLoading(void)
 {
-    emit signal_stateChanged(ffSequence::justLoading);
+    emit signal_stateChanged(justLoading);
 }
 
 void DSLRLabView::onJustOpened(void)
 {
-    emit signal_stateChanged(ffSequence::justOpened);
+    emit signal_stateChanged(justOpened);
 }
 
 void DSLRLabView::onJustClosed(void)
 {
-    emit signal_stateChanged(ffSequence::justClosed);
+    emit signal_stateChanged(justClosed);
 }
 
-void DSLRLabView::onJustErrored(void)
-{
-    emit signal_stateChanged(ffSequence::justErrored);
-}
+//void DSLRLabView::onJustErrored(void)
+//{
+//    emit signal_stateChanged(ffSequence::justErrored);
+//}
 
-void DSLRLabView::onStateChanged(ffSequence::ffSequenceState state)
+void DSLRLabView::onStateChanged(ffSequenceState state)
 {
     switch (state)
     {
-    case (ffSequence::isValid):
+    case (isValid):
         break;
-    case (ffSequence::isInvalid):
+    case (isInvalid):
         disconnect(m_pSlider, SIGNAL(signal_valueChanged(long)), this,
                    SLOT(onSliderChanged(long)));
         m_pSlider->setEnabled(false);
@@ -468,8 +482,8 @@ void DSLRLabView::onStateChanged(ffSequence::ffSequenceState state)
         m_pSlider->setValue(0);
         m_pSlider->setMaximum(0);
         break;
-    case (ffSequence::justLoading):
-    case (ffSequence::isLoading):
+    case (justLoading):
+    case (isLoading):
         disconnect(m_pSlider, SIGNAL(signal_valueChanged(long)), this,
                    SLOT(onSliderChanged(long)));
         m_pSlider->setEnabled(false);
@@ -477,12 +491,11 @@ void DSLRLabView::onStateChanged(ffSequence::ffSequenceState state)
         m_pSlider->setValue(0);
         m_pSlider->setMaximum(0);
         break;
-    case (ffSequence::justOpened):
+    case (justOpened):
         fitToView();
         m_pSlider->setMinimum(ffDefault::FirstFrame);
         m_pSlider->setMaximum(getTotalFrames());
         m_pSlider->setValue(ffDefault::FirstFrame);
-        //m_pSlider->setTrim(ffTrim(getQffSequence()->getExportTrim()));
         connect(m_pSlider, SIGNAL(signal_valueChanged(long)), this,
                 SLOT(onSliderChanged(long)));
         m_pSlider->setEnabled(true);
@@ -501,8 +514,7 @@ void DSLRLabView::onStateChanged(ffSequence::ffSequenceState state)
         m_pTextPill->start(tr("Loaded file ") +
                            QString::fromStdString(m_pffSequence->getFileURI()));
         break;
-    case (ffSequence::justErrored):
-    case (ffSequence::justClosed):
+    case (justClosed):
         m_pGraphicsPixmapItem->setGraphicsEffect(m_pFadePixmap);
         m_pFadePixmapAnimation->setDirection(QAbstractAnimation::Backward);
         m_pFadePixmapAnimation->start();

@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include <QtGui>
 
-#include "dslrlabview.h"
+#include "ycbcrlabview.h"
 #include "ffsequence.h"
 
 enum MarginDefault
@@ -37,12 +37,12 @@ enum SpacingDefault
     BASESPACING = 14
 };
 
-#define DSLRLAB_DEFAULT_WIDTH               1280
-#define DSLRLAB_DEFAULT_HEIGHT              720
-#define DSLRLAB_SIDEBAR_RATIO               0
-#define DSLRLAB_PRIMARYVIEW_RATIO           5
+#define YCBCRLAB_DEFAULT_WIDTH               1280
+#define YCBCRLAB_DEFAULT_HEIGHT              720
+#define YCBCRLAB_SIDEBAR_RATIO               0
+#define YCBCRLAB_PRIMARYVIEW_RATIO           5
 
-#define SIDEBAR_MINIMUM_WIDTH               DSLRLAB_DEFAULT_WIDTH/5
+#define SIDEBAR_MINIMUM_WIDTH               YCBCRLAB_DEFAULT_WIDTH/5
 
 class MainWindow;
 
@@ -104,7 +104,7 @@ private:
 
     QComboBox                              *m_pSBVPlaneCombo;
 
-    DSLRLabView                            *m_pDSLRLabView;
+    YCbCrLabView                           *m_pYCbCrLabView;
     QSplitter                              *m_pSplitter;
 
     // Actions

@@ -8,24 +8,24 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = DSLRVideoLab
+TARGET = YCbCrLab
 TEMPLATE = app
 
 
 SOURCES += main.cpp\
         mainwindow.cpp \
-    dslrlabview.cpp \
     ffsequence.cpp \
     textpill.cpp \
     qbasegraphicsview.cpp \
-    qgraphicstrimslider.cpp
+    qgraphicstrimslider.cpp \
+    ycbcrlabview.cpp
 
 HEADERS  += mainwindow.h \
-    dslrlabview.h \
     ffsequence.h \
     textpill.h \
     qbasegraphicsview.h \
-    qgraphicstrimslider.h
+    qgraphicstrimslider.h \
+    ycbcrlabview.h
 
 unix|win32: LIBS += -lavformat
 
@@ -35,4 +35,5 @@ RESOURCES +=
 
 OTHER_FILES += \
     TODO.txt \
-    LICENSE.txt
+    LICENSE.txt \
+    CMakeLists.txt

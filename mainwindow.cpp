@@ -78,7 +78,7 @@ MainWindow::MainWindow(QWidget *parent) :
     createActions();
     createMenus();
 
-    onStateChanged(m_pDSLRLabView->getState());
+    onStateChanged(m_pYCbCrLabView->getState());
 }
 
 MainWindow::~MainWindow()
@@ -117,7 +117,7 @@ void MainWindow::exportFile(void)
     {
         QFileDialog::Options    options;
         QString                 selectedFilter;
-        QFileInfo               fileInfo(m_pDSLRLabView->getFileURI());
+        QFileInfo               fileInfo(m_pYCbCrLabView->getFileURI());
 
         QString                 fileName =
             QFileDialog::getSaveFileName(this,
@@ -153,15 +153,15 @@ void MainWindow::createObjects(void)
     m_pSplitter = new QSplitter(Qt::Horizontal);
     m_pSBToolBox = new QToolBox;
 
-    m_pDSLRLabView = new DSLRLabView;
+    m_pYCbCrLabView = new YCbCrLabView;
 }
 
 void MainWindow::initObjects(void)
 {
     setGeometry(QStyle::alignedRect(
                     Qt::LeftToRight, Qt::AlignCenter,
-                    QSize(DSLRLAB_DEFAULT_WIDTH,
-                          DSLRLAB_DEFAULT_HEIGHT),
+                    QSize(YCBCRLAB_DEFAULT_WIDTH,
+                          YCBCRLAB_DEFAULT_HEIGHT),
                     QApplication::desktop()->availableGeometry()));
 
     setWindowTitle(tr("YCbCr Lab"));
@@ -174,7 +174,7 @@ void MainWindow::initObjects(void)
 
     initSidebar();
     m_pSplitter->addWidget(m_pSBToolBox);
-    m_pSplitter->addWidget(m_pDSLRLabView);
+    m_pSplitter->addWidget(m_pYCbCrLabView);
 
     pRows->addWidget(m_pSplitter);
 }
@@ -274,7 +274,7 @@ void MainWindow::initSidebar(void)
             SLOT(onSidebarSetOut(int)));
     connect(m_pSBEPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
             SLOT(onSidebarExportPlaneChanged(int)));
-    connect(m_pDSLRLabView->getQffSequence(),
+    connect(m_pYCbCrLabView->getQffSequence(),
             SIGNAL(signal_exportTrimChanged(long,long,void*)), this,
             SLOT(onTrimChanged(long,long,void*)));
     connect(m_pSBEInReset, SIGNAL(clicked()), this, SLOT(onSidebarResetIn()));
@@ -335,9 +335,9 @@ void MainWindow::createActions(void)
 //    m_pActionResetOut->setShortcut(tr("p"));
 //    connect(m_pActionResetOut, SIGNAL(triggered()), this, SLOT(onSidebarResetOut()));
 
-    connect(m_pDSLRLabView, SIGNAL(signal_error(QString)), this,
+    connect(m_pYCbCrLabView, SIGNAL(signal_error(QString)), this,
             SLOT(onError(QString)));
-    connect(m_pDSLRLabView, SIGNAL(signal_stateChanged(ffSequenceState)), this,
+    connect(m_pYCbCrLabView, SIGNAL(signal_stateChanged(ffSequenceState)), this,
             SLOT(onStateChanged(ffSequenceState)));
 }
 
@@ -396,14 +396,14 @@ void MainWindow::onMenuFileQuit()
 
 void MainWindow::onMenuViewFitToView()
 {
-    m_pDSLRLabView->fitToView();
-    m_pDSLRLabView->getTextPillItem()->start(tr("Fit to View"));
+    m_pYCbCrLabView->fitToView();
+    m_pYCbCrLabView->getTextPillItem()->start(tr("Fit to View"));
 }
 
 void MainWindow::onMenuViewZoom1x()
 {
-    m_pDSLRLabView->resetTransform();
-    m_pDSLRLabView->getTextPillItem()->start(tr("Zoom 1x"));
+    m_pYCbCrLabView->resetTransform();
+    m_pYCbCrLabView->getTextPillItem()->start(tr("Zoom 1x"));
 }
 
 void MainWindow::onOpenFile(QString fileName)
@@ -413,7 +413,7 @@ void MainWindow::onOpenFile(QString fileName)
         if (fileName.isNull())
             throw ffImportError("fileName.isNull()",
                                 ffError::ERROR_NULL_FILENAME);
-        m_pDSLRLabView->openSequence(fileName.toUtf8().data());
+        m_pYCbCrLabView->openSequence(fileName.toUtf8().data());
     }
     catch (ffImportError eff)
     {
@@ -433,7 +433,7 @@ void MainWindow::onExport(QString fileName)
         if (fileName.isNull())
             throw ffExportError("fileName.isNull()",
                                 ffError::ERROR_NULL_FILENAME);
-        m_pDSLRLabView->saveSequence(fileName.toUtf8().data());
+        m_pYCbCrLabView->saveSequence(fileName.toUtf8().data());
     }
     catch (ffExportError eff)
     {
@@ -458,7 +458,7 @@ void MainWindow::onError(QString message)
 
     msgBox.exec();
 
-    //onStateChanged(m_pDSLRLabView->getState());
+    //onStateChanged(m_pYCBCRLabView->getState());
 }
 
 void MainWindow::onStateChanged(ffSequenceState state)
@@ -509,7 +509,7 @@ void MainWindow::onStateChanged(ffSequenceState state)
 void MainWindow::onTrimChanged(long in, long out, void */*sender*/)
 {
     m_pSBEInSpin->setRange(ffDefault::FirstFrame, out);
-    m_pSBEOutSpin->setRange(in, m_pDSLRLabView->getTotalFrames());
+    m_pSBEOutSpin->setRange(in, m_pYCbCrLabView->getTotalFrames());
     m_pSBEInSpin->setValue(in);
     m_pSBEOutSpin->setValue(out);
 }
@@ -522,7 +522,7 @@ void MainWindow::onFrameChanged(long frame, void */*sender*/)
 
 void MainWindow::onSidebarViewerPlaneChanged(int plane)
 {
-    m_pDSLRLabView->setViewerPlane((ffViewer::ViewerPlane)plane);
+    m_pYCbCrLabView->setViewerPlane((ffViewer::ViewerPlane)plane);
 }
 
 void MainWindow::onSidebarExportPlaneChanged(int plane)
@@ -533,21 +533,21 @@ void MainWindow::onSidebarExportPlaneChanged(int plane)
 void MainWindow::onSidebarSetIn(int in)
 {
     // Let the lower level ffSequence test for validity.
-    m_pDSLRLabView->getQffSequence()->setExportTrimIn(in, this);
+    m_pYCbCrLabView->getQffSequence()->setExportTrimIn(in, this);
 }
 
 void MainWindow::onSidebarSetOut(int out)
 {
     // Let the lower level ffSequence object test for validity.
-   m_pDSLRLabView->getQffSequence()->setExportTrimOut(out, this);
+   m_pYCbCrLabView->getQffSequence()->setExportTrimOut(out, this);
 }
 
 void MainWindow::onSidebarResetIn(void)
 {
-    m_pDSLRLabView->getQffSequence()->resetExportTrimIn(this);
+    m_pYCbCrLabView->getQffSequence()->resetExportTrimIn(this);
 }
 
 void MainWindow::onSidebarResetOut(void)
 {
-    m_pDSLRLabView->getQffSequence()->resetExportTrimOut(this);
+    m_pYCbCrLabView->getQffSequence()->resetExportTrimOut(this);
 }

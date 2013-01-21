@@ -129,9 +129,9 @@ void MainWindow::exportFile(void)
                                          options);
         if (!fileName.isNull())
         {
-            m_workerThread = QtConcurrent::run(this,
-                                               &MainWindow::onExport,
-                                               fileName);
+            //m_workerThread = QtConcurrent::run(this,
+            //                                   &MainWindow::onExport,
+            //                                   fileName);
         }
     }
 }
@@ -264,8 +264,8 @@ void MainWindow::initSidebar(void)
 
     m_pSBToolBox->setCurrentIndex(1);
 
-    connect(m_pSBVPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
-            SLOT(onSidebarViewerPlaneChanged(int)));
+    connect(m_pSBEPathButton, SIGNAL(pressed()), this,
+            SLOT(onPathSelectPress()));
     connect(m_pSBEInReset, SIGNAL(clicked()), this, SLOT(onSidebarResetIn()));
     connect(m_pSBEOutReset, SIGNAL(clicked()), this, SLOT(onSidebarResetOut()));
     connect(m_pSBEInSpin, SIGNAL(valueChanged(int)), this,
@@ -279,6 +279,8 @@ void MainWindow::initSidebar(void)
             SLOT(onTrimChanged(long,long,void*)));
     connect(m_pSBEInReset, SIGNAL(clicked()), this, SLOT(onSidebarResetIn()));
     connect(m_pSBEOutReset, SIGNAL(clicked()), this, SLOT(onSidebarResetOut()));
+    connect(m_pSBVPlaneCombo, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(onSidebarViewerPlaneChanged(int)));
 }
 
 void MainWindow::createActions(void)
@@ -377,7 +379,7 @@ void MainWindow::onMenuFileExport()
 {
     try
     {
-        exportFile();
+        //exportFile();
     }
     catch (ffExportError eff)
     {
@@ -518,6 +520,11 @@ void MainWindow::onFrameChanged(long frame, void */*sender*/)
 {
     m_pSBEInSpin->setMaximum(frame);
     m_pSBEOutSpin->setMinimum(frame);
+}
+
+void MainWindow::onPathSelectPress()
+{
+    exportFile();
 }
 
 void MainWindow::onSidebarViewerPlaneChanged(int plane)

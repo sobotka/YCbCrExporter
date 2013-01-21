@@ -421,8 +421,8 @@ void YCbCrLabView::onProgressStart(void)
 
 void YCbCrLabView::onProgress(double factor)
 {
-    m_targetProgress = (factor * PROGRESS_MAXIMUM) +
-            PROGRESS_MAXIMUM * TIMELINE_PROGRESS_DELAY;
+    m_targetProgress = (factor * (double)PROGRESS_MAXIMUM);// +
+            //PROGRESS_MAXIMUM * TIMELINE_PROGRESS_DELAY;
     if (m_pProgressTimeline->state() != QTimeLine::Running)
         m_pProgressTimeline->start();
 }
@@ -436,13 +436,11 @@ void YCbCrLabView::onProgressEnd(void)
 
 void YCbCrLabView::onProgressAnimation(qreal)
 {
-    if (m_targetProgress >= m_pProgressBar->value())
+    if (m_targetProgress > m_pProgressBar->value())
     {
-        int step = (((double)m_targetProgress -
-                     (double)m_pProgressBar->value()) *
-                    ((double)TIMELINE_PROGRESS_UPDATE /
-                     (double)TIMELINE_DURATION)) + 1.5;
-                ;
+        int step = ((double)m_targetProgress -
+                     (double)m_pProgressBar->value());
+
         m_pProgressBar->setValue(m_pProgressBar->value() + step);
         m_pProgressBar->update();
     }
@@ -493,9 +491,9 @@ void YCbCrLabView::onStateChanged(ffSequenceState state)
         break;
     case (justOpened):
         fitToView();
-        m_pSlider->setMinimum(ffDefault::FirstFrame);
         m_pSlider->setMaximum(getTotalFrames());
         m_pSlider->setValue(ffDefault::FirstFrame);
+        m_pSlider->setMinimum(ffDefault::FirstFrame);
         connect(m_pSlider, SIGNAL(signal_valueChanged(long)), this,
                 SLOT(onSliderChanged(long)));
         m_pSlider->setEnabled(true);

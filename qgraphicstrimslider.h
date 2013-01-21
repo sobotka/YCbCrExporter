@@ -53,6 +53,9 @@ private:
     void createObjects(void);
     void initObjects(void);
 
+    float valueToGeometry(void);
+    long geometryToValue(float);
+
     virtual void mousePressEvent(QGraphicsSceneMouseEvent *);
     virtual void mouseMoveEvent(QGraphicsSceneMouseEvent *);
 

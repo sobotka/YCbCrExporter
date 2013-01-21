@@ -84,6 +84,8 @@ private slots:
     void onTrimChanged(long, long, void *);
     void onFrameChanged(long, void *);
 
+    void onPathSelectPress(void);
+
     void onSidebarViewerPlaneChanged(int);
     void onSidebarExportPlaneChanged(int);
     void onSidebarSetIn(int);

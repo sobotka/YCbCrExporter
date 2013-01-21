@@ -43,8 +43,8 @@ void QGraphicsTrimSlider::paint(QPainter *pPainter,
     pen.setWidth(ValueSliderWidth);
     pPainter->setPen(pen);
     pPainter->setClipPath(m_painterPath);
-    pPainter->drawLine(QPointF(m_rectF.width()*m_position, m_rectF.top()),
-                       QPointF(m_rectF.width()*m_position, m_rectF.bottom()));
+    pPainter->drawLine(QPointF(valueToGeometry(), m_rectF.top()),
+                       QPointF(valueToGeometry(), m_rectF.bottom()));
 }
 
 void QGraphicsTrimSlider::createObjects()
@@ -56,25 +56,40 @@ void QGraphicsTrimSlider::initObjects()
     setGeometry(0, 0, Width, Height);
 }
 
+float QGraphicsTrimSlider::valueToGeometry(void)
+{
+    if (m_maxValue == 1)
+        // Divide by zero catch.
+        return m_minValue;
+    else
+        return m_rectF.width() * (((float)m_value - 1.0) /
+                                  ((float)m_maxValue - 1.0));
+}
+
+long QGraphicsTrimSlider::geometryToValue(float geometry)
+{
+    if (m_maxValue == 1)
+        // Divide by zero catch.
+        return m_minValue;
+    else
+        return ceil((geometry / m_rectF.width()) * ((float)m_maxValue));
+}
+
 void QGraphicsTrimSlider::mousePressEvent(QGraphicsSceneMouseEvent *event)
 {
-    m_position = event->pos().x();
-    m_position /= m_rectF.width();
-    setValue(m_position * (float)m_maxValue);
+    mouseMoveEvent(event);
 }
 
 void QGraphicsTrimSlider::mouseMoveEvent(QGraphicsSceneMouseEvent *event)
 {
-    m_position = event->pos().x();
+    m_position = (float)event->pos().x();
 
     if (m_position < 0)
         m_position = 0;
     else if (m_position > m_rectF.width())
-        m_position = 1.0;
-    else
-        m_position /= m_rectF.width();
+        m_position = m_rectF.width();
 
-    setValue(m_position * (float)m_maxValue);
+    setValue(geometryToValue(m_position));
 }
 
 void QGraphicsTrimSlider::resizeEvent(QGraphicsSceneResizeEvent *event)
@@ -149,6 +164,10 @@ void QGraphicsTrimSlider::setMaximum(long max)
 
 void QGraphicsTrimSlider::setMinimum(long min)
 {
+    // There are a number of cases where order of setting is important,
+    // and this function should be more robust and always succeed. It
+    // currently does not, which can lead to odd issues if one is not
+    // careful about order of setting.
     if ((min != m_minValue) && (min <= m_maxValue))
     {
         if (min > m_value)
@@ -162,9 +181,15 @@ void QGraphicsTrimSlider::setMinimum(long min)
 
 void QGraphicsTrimSlider::setValue(long value)
 {
-    if ((value != m_value) && ((value >= m_minValue) && (value <= m_maxValue)))
+    if (value != m_value)
     {
-        m_value = value;
+        if (value <= m_minValue)
+            m_value = m_minValue;
+        else if (value >= m_maxValue)
+            m_value = m_maxValue;
+        else
+            m_value = value;
+
         update();
         emit signal_valueChanged(m_value);
     }

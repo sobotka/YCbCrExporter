@@ -111,15 +111,13 @@ void MainWindow::openFile(void)
     }
 }
 
-void MainWindow::exportFile(void)
+void MainWindow::setExportFilePath(void)
 {
-    if (!m_workerThread.isRunning())
-    {
-        QFileDialog::Options    options;
-        QString                 selectedFilter;
-        QFileInfo               fileInfo(m_pYCbCrLabView->getFileURI());
+    QFileDialog::Options    options;
+    QString                 selectedFilter;
+    QFileInfo               fileInfo(m_pYCbCrLabView->getFileURI());
 
-        QString                 fileName =
+    QString                 fileName =
             QFileDialog::getSaveFileName(this,
                                          tr("QFileDialog::getSaveFileName()"),
                                          fileInfo.baseName(),
@@ -127,18 +125,15 @@ void MainWindow::exportFile(void)
                                             ";;OpenEXR Files(*.EXR)"),
                                          &selectedFilter,
                                          options);
-        if (!fileName.isNull())
-        {
-            //m_workerThread = QtConcurrent::run(this,
-            //                                   &MainWindow::onExport,
-            //                                   fileName);
-        }
-    }
+
+    m_pYCbCrLabView->getQffSequence()->setExportPath(fileName.toStdString(),
+                                                     this);
 }
 
 void MainWindow::createObjects(void)
 {
     // Export Interface
+    m_pSBEPathPlainText = new QPlainTextEdit;
     m_pSBEPathButton = new QPushButton(tr("Select Path"));
     m_pSBEFileTypeCombo = new QComboBox;
     m_pSBEPlaneCombo = new QComboBox;
@@ -195,7 +190,8 @@ void MainWindow::initSidebar(void)
     m_pSBEPlaneCombo->setCurrentIndex(ffExportDetails::RGB);
 
     // Export File Type Combo Initialization
-    m_pSBEFileTypeCombo->addItem(tr("OpenEXR"), ffExportDetails::OpenEXR);
+//    m_pSBEFileTypeCombo->addItem(tr("OpenEXR"), ffExportDetails::OpenEXR);
+    m_pSBEFileTypeCombo->addItem(tr("TIFF"), ffExportDetails::TIFF);
     m_pSBEFileTypeCombo->addItem(tr("JPEG"), ffExportDetails::JPEG);
 
     QWidget *pAnchor = new QWidget;
@@ -210,6 +206,10 @@ void MainWindow::initSidebar(void)
     pRows->addWidget(pGroupBox);
     pSubRows = new QVBoxLayout;
     pGroupBox->setLayout(pSubRows);
+    pSubRows->addWidget(m_pSBEPathPlainText);
+//    m_pSBEPathPlainText->appendPlainText(
+//                QString::fromStdString(stripExtension(
+//                    QApplication::applicationFilePath().toStdString())));
     pSubRows->addWidget(m_pSBEPathButton);
     // File Type
     pGroupBox = new QGroupBox("File Format");
@@ -218,11 +218,11 @@ void MainWindow::initSidebar(void)
     pGroupBox->setLayout(pSubRows);
     pSubRows->addWidget(m_pSBEFileTypeCombo);
     // Export Planes
-    pGroupBox = new QGroupBox("Plane(s)");
-    pRows->addWidget(pGroupBox);
-    pSubRows = new QVBoxLayout;
-    pGroupBox->setLayout(pSubRows);
-    pSubRows->addWidget(m_pSBEPlaneCombo);
+//    pGroupBox = new QGroupBox("Plane(s)");
+//    pRows->addWidget(pGroupBox);
+//    pSubRows = new QVBoxLayout;
+//    pGroupBox->setLayout(pSubRows);
+//    pSubRows->addWidget(m_pSBEPlaneCombo);
 
     // In / Out Planes
     pGroupBox = new QGroupBox("In / Out Frames");
@@ -246,7 +246,7 @@ void MainWindow::initSidebar(void)
     m_pSBVPlaneCombo->addItem(tr("Y"), ffViewer::Y);
     m_pSBVPlaneCombo->addItem(tr("Cb"), ffViewer::Cb);
     m_pSBVPlaneCombo->addItem(tr("Cr"), ffViewer::Cr);
-    m_pSBVPlaneCombo->addItem(tr("Combined RGB"), ffViewer::RGB);
+//    m_pSBVPlaneCombo->addItem(tr("Combined RGB"), ffViewer::RGB);
     m_pSBVPlaneCombo->setCurrentIndex(ffViewer::Y);
 
     pAnchor = new QWidget;
@@ -264,6 +264,17 @@ void MainWindow::initSidebar(void)
 
     m_pSBToolBox->setCurrentIndex(1);
 
+    connect(m_pYCbCrLabView->getQffSequence(),
+            SIGNAL(signal_exportFormatChanged(ffExportDetails::ExportFormat,
+                                              void*)),
+            this,
+            SLOT(onExportFormatChanged(ffExportDetails::ExportFormat,void*)));
+    connect(m_pSBEFileTypeCombo, SIGNAL(currentIndexChanged(int)), this,
+            SLOT(onSidebarExportFormatChanged(int)));
+    connect(m_pYCbCrLabView->getQffSequence(),
+            SIGNAL(signal_exportPathChanged(std::string,void*)),
+            this,
+            SLOT(onPathChanged(std::string, void *)));
     connect(m_pSBEPathButton, SIGNAL(pressed()), this,
             SLOT(onPathSelectPress()));
     connect(m_pSBEInReset, SIGNAL(clicked()), this, SLOT(onSidebarResetIn()));
@@ -379,7 +390,7 @@ void MainWindow::onMenuFileExport()
 {
     try
     {
-        //exportFile();
+        onExport();
     }
     catch (ffExportError eff)
     {
@@ -428,14 +439,11 @@ void MainWindow::onOpenFile(QString fileName)
     }
 }
 
-void MainWindow::onExport(QString fileName)
+void MainWindow::onExport(void)
 {
     try
     {
-        if (fileName.isNull())
-            throw ffExportError("fileName.isNull()",
-                                ffError::ERROR_NULL_FILENAME);
-        m_pYCbCrLabView->saveSequence(fileName.toUtf8().data());
+        m_pYCbCrLabView->saveSequence();
     }
     catch (ffExportError eff)
     {
@@ -524,7 +532,35 @@ void MainWindow::onFrameChanged(long frame, void */*sender*/)
 
 void MainWindow::onPathSelectPress()
 {
-    exportFile();
+    setExportFilePath();
+}
+
+void MainWindow::onPathChanged(std::string fileName, void *)
+{
+    m_pSBEPathPlainText->clear();
+    m_pSBEPathPlainText->appendPlainText(QString::fromStdString(fileName));
+}
+
+void MainWindow::onExportFormatChanged(ffExportDetails::ExportFormat format,
+                                       void *)
+{
+    // There is no terrifically elegant way to deal with converting the format
+    // to an index. If the indices were 1:1, as was the original intention,
+    // it would work relatively fine. Likely safer like this.
+    switch (format)
+    {
+    case (ffExportDetails::JPEG):
+        m_pSBEFileTypeCombo->setCurrentIndex(
+                    m_pSBEFileTypeCombo->findText("JPEG"));
+        break;
+    case (ffExportDetails::TIFF):
+        m_pSBEFileTypeCombo->setCurrentIndex(
+                    m_pSBEFileTypeCombo->findText("TIFF"));
+        break;
+    case (ffExportDetails::OpenEXR):
+        // Pass as this is currently unhandled.
+        break;
+    }
 }
 
 void MainWindow::onSidebarViewerPlaneChanged(int plane)
@@ -535,6 +571,12 @@ void MainWindow::onSidebarViewerPlaneChanged(int plane)
 void MainWindow::onSidebarExportPlaneChanged(int plane)
 {
     m_pSBEPlaneCombo->setCurrentIndex((ffExportDetails::ExportPlane)plane);
+}
+
+void MainWindow::onSidebarExportFormatChanged(int format)
+{
+    m_pYCbCrLabView->getQffSequence()->setExportFormat(
+                (ffExportDetails::ExportFormat)format, this);
 }
 
 void MainWindow::onSidebarSetIn(int in)

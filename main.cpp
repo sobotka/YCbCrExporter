@@ -33,7 +33,8 @@ int main(int argc, char *argv[])
                     "QProgressBar {border: 1px solid grey;"
                     "border-radius: 0; background-color: #8C8C8C;}"
                     "QProgressBar::chunk {"
-                    "background-color: #404040; width: 1px;}");
+                    "background-color: #404040; width: 1px;}"
+                    "QPlainTextEdit {background:transparent}");
 
     MainWindow w;
     a.m_pMainWindow = &w;

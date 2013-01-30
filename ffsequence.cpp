@@ -102,6 +102,16 @@ ffExportDetails::ExportPlane ffExportDetails::getExportPlane()
     return m_exportPlanes;
 }
 
+std::string ffExportDetails::getExportPath()
+{
+    return m_exportPath;
+}
+
+ffExportDetails::ExportFormat ffExportDetails::getExportFormat()
+{
+    return m_exportFormat;
+}
+
 void ffExportDetails::setExportSize(ffSize size)
 {
     m_exportSize.m_width = size.m_width;
@@ -132,6 +142,16 @@ void ffExportDetails::setTrim(long in, long out)
 void ffExportDetails::setExportPlane(ffExportDetails::ExportPlane plane)
 {
     m_exportPlanes = plane;
+}
+
+void ffExportDetails::setExportPath(std::string fileName)
+{
+    m_exportPath = fileName;
+}
+
+void ffExportDetails::setExportFormat(ExportFormat format)
+{
+    m_exportFormat = format;
 }
 
 /******************************************************************************
@@ -407,6 +427,8 @@ void ffSequence::readFile(char *fileName)
         setCurrentFrame(ffDefault::FirstFrame, this);
         setExportDimensions(m_lumaSize.m_width, m_lumaSize.m_height, this);
         setExportTrim(ffDefault::FirstFrame, getTotalFrames(), this);
+        setExportPath(stripExtension(getFileURI()), this);
+        setExportFormat(ffExportDetails::TIFF, this);
         onProgressEnd();
         onJustOpened();
     }
@@ -424,22 +446,66 @@ void ffSequence::readFile(char *fileName)
     }
 }
 
-void ffSequence::writeFile(char *fileName)
+void ffSequence::exportFiles(void)
 {
     try
     {
-        ImageOutput *imageOutput = ImageOutput::create (fileName);
-        if (imageOutput == NULL)
-            throw ffExportError("imageOutput == NULL",
-                                ffError::ERROR_BAD_FILENAME);
-        ImageSpec imageSpec(m_lumaSize.m_width, m_lumaSize.m_height,
-                            1, TypeDesc::UINT8);
+        std::stringstream ss;
+        std::stringstream pathBuffer;
 
-        imageOutput->open(fileName, imageSpec);
-        imageOutput->write_image(TypeDesc::UINT8,
-                                 getRawFrame(getCurrentFrame())->m_pY);
-        imageOutput->close();
-        delete imageOutput;
+        ss << m_pExportDetails->getTrim().m_out;
+
+        int length = ss.str().length();
+
+        for (int i = m_pExportDetails->getTrim().m_in;
+             i <= m_pExportDetails->getTrim().m_out; i++)
+        {
+            ss.str("");
+            pathBuffer.str("");
+
+            ss << std::setw(length) << std::setfill('0') << i;
+
+            pathBuffer << m_pExportDetails->getExportPath() << ss.str();
+
+            switch (m_pExportDetails->getExportFormat())
+            {
+            case (ffExportDetails::JPEG):
+                pathBuffer << ".jpg";
+                break;
+            case (ffExportDetails::TIFF):
+                pathBuffer << ".tif";
+                break;
+            case (ffExportDetails::OpenEXR):
+                pathBuffer << ".exr";
+                break;
+            }
+
+            std::cout << pathBuffer.str() << std::endl;
+            ImageOutput *imageOutput = ImageOutput::create(pathBuffer.str());
+            if (imageOutput == NULL)
+                throw ffExportError("imageOutput == NULL",
+                                    ffError::ERROR_BAD_FILENAME);
+            ImageSpec imageSpec(m_lumaSize.m_width, m_lumaSize.m_height,
+                                1, TypeDesc::UINT8);
+            imageOutput->open(pathBuffer.str(), imageSpec);
+
+            imageOutput->write_image(TypeDesc::UINT8,
+                                     getRawFrame(getCurrentFrame())->m_pY);
+            imageOutput->close();
+            delete imageOutput;
+        }
+//        ImageOutput *imageOutput = ImageOutput::create (fileName);
+//        if (imageOutput == NULL)
+//            throw ffExportError("imageOutput == NULL",
+//                                ffError::ERROR_BAD_FILENAME);
+//        ImageSpec imageSpec(m_lumaSize.m_width, m_lumaSize.m_height,
+//                            1, TypeDesc::UINT8);
+
+//        imageOutput->open(fileName, imageSpec);
+//        imageOutput->write_image(TypeDesc::UINT8,
+//                                 getRawFrame(getCurrentFrame())->m_pY);
+//        imageOutput->close();
+//        delete imageOutput;
     }
     catch (ffExportError eff)
     {
@@ -554,6 +620,25 @@ void ffSequence::setExportDimensions(long width, long height, void *sender)
     }
 }
 
+void ffSequence::setExportPath(std::string fileName, void *sender)
+{
+    if (!fileName.empty() && (fileName != m_pExportDetails->getExportPath()))
+    {
+        m_pExportDetails->setExportPath(fileName);
+        onExportPathChanged(m_pExportDetails->getExportPath(), sender);
+    }
+}
+
+void ffSequence::setExportFormat(ffExportDetails::ExportFormat format,
+                                 void *sender)
+{
+    if (m_pExportDetails->getExportFormat() != format)
+    {
+        m_pExportDetails->setExportFormat(format);
+        onExportFormatChanged(m_pExportDetails->getExportFormat(), sender);
+    }
+}
+
 ffTrim ffSequence::getExportTrim(void)
 {
     return m_pExportDetails->getTrim();
@@ -639,7 +724,25 @@ void ffSequence::onExportDimensionsChanged(long, long, void *)
     // Pass
 }
 
+void ffSequence::onExportPathChanged(std::string, void *)
+{
+    // Pass
+}
+
+void ffSequence::onExportFormatChanged(ffExportDetails::ExportFormat, void *)
+{
+    // Pass
+}
+
 void ffSequence::onFrameChanged(long, void *)
 {
     // Pass
+}
+
+std::string stripExtension(std::string fileName)
+{
+    size_t lastdot = fileName.find_last_of(".");
+    if (lastdot == std::string::npos)
+        return fileName;
+    return fileName.substr(0, lastdot);
 }

@@ -35,6 +35,8 @@ extern "C"
 
 #include <stdexcept>
 #include <vector>
+#include <iostream>
+#include <iomanip>
 
 #include "OpenImageIO/imageio.h"
 OIIO_NAMESPACE_USING
@@ -242,7 +244,8 @@ public:
     enum ExportFormat
     {
         OpenEXR =                           0,
-        JPEG =                              1
+        JPEG =                              1,
+        TIFF =                              2
     };
 
 private:
@@ -252,6 +255,8 @@ private:
     ffInterpolator::Type                    m_CrInterp;
     ffTrim                                  m_trim;
     ExportPlane                             m_exportPlanes;
+    std::string                             m_exportPath;
+    ExportFormat                            m_exportFormat;
 
 public:
     ffExportDetails(void);
@@ -263,6 +268,8 @@ public:
     ffInterpolator::Type getCrInterp(void);
     ffTrim getTrim(void);
     ExportPlane getExportPlane(void);
+    std::string getExportPath(void);
+    ExportFormat getExportFormat(void);
 
     void setExportSize(ffSize);
     void setYInterp(ffInterpolator::Type);
@@ -270,6 +277,8 @@ public:
     void setCrInterp(ffInterpolator::Type);
     void setTrim(long, long);
     void setExportPlane(ExportPlane);
+    void setExportPath(std::string);
+    void setExportFormat(ExportFormat);
 };
 
 /******************************************************************************
@@ -318,7 +327,7 @@ public:
     ~ffSequence();
 
     void readFile(char *fileName);
-    void writeFile(char *);
+    void exportFiles(void);
     void closeFile(void);
 
     ffRawFrame* getRawFrame(long);
@@ -330,6 +339,8 @@ public:
     void setExportTrimOut(long, void *);
     void setExportPlane(ffExportDetails::ExportPlane, void *);
     void setExportDimensions(long, long, void*);
+    void setExportPath(std::string, void *);
+    void setExportFormat(ffExportDetails::ExportFormat, void *);
     void resetExportTrim(void *);
     void resetExportTrimIn(void *);
     void resetExportTrimOut(void *);
@@ -358,6 +369,11 @@ public:
     virtual void onExportTrimChanged(long, long, void *);
     virtual void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
     virtual void onExportDimensionsChanged(long, long, void*);
+    virtual void onExportPathChanged(std::string, void *);
+    virtual void onExportFormatChanged(ffExportDetails::ExportFormat, void *);
     virtual void onFrameChanged(long, void *);
 };
+
+std::string stripExtension(std::string);
+
 #endif // FFSEQUENCE_H

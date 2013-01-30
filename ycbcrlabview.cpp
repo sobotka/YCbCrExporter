@@ -28,6 +28,9 @@ QffSequence::QffSequence(QWidget *parent) :
     QObject(parent), ffSequence()
 {
     qRegisterMetaType<ffSequenceState>("ffSequenceState");
+    qRegisterMetaType<std::string>("std::string");
+    qRegisterMetaType<ffExportDetails::ExportFormat>(
+                "ffExportDetails::ExportFormat");
 }
 
 void QffSequence::onProgressStart(void)
@@ -74,6 +77,17 @@ void QffSequence::onExportPlaneChanged(ffExportDetails::ExportPlane plane,
                                        void *sender)
 {
     emit signal_exportPlaneChanged(plane, sender);
+}
+
+void QffSequence::onExportPathChanged(std::string fileName, void *sender)
+{
+    emit signal_exportPathChanged(fileName, sender);
+}
+
+void QffSequence::onExportFormatChanged(ffExportDetails::ExportFormat format,
+                                        void *sender)
+{
+    emit signal_exportFormatChanged(format, sender);
 }
 
 void QffSequence::onFrameChanged(long frame, void *sender)
@@ -320,7 +334,7 @@ void YCbCrLabView::openSequence(char *fileName)
         emit signal_error(message);
         throw; // Pass up chain for proper UI handling.
     }
-    catch (ffExportError eff)
+    catch (ffImportError eff)
     {
         QString message = tr("There was an error attempting to open the "
                              "file. <<FFERROR: ") + QString(eff.what()) +
@@ -331,11 +345,11 @@ void YCbCrLabView::openSequence(char *fileName)
     }
 }
 
-void YCbCrLabView::saveSequence(char *fileName)
+void YCbCrLabView::saveSequence(void)
 {
     try
     {
-        m_pffSequence->writeFile(fileName);
+        m_pffSequence->exportFiles();
     }
     catch (ffExportError eff)
     {

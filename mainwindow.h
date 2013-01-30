@@ -78,16 +78,19 @@ private slots:
     void onMenuViewFitToView();
     void onMenuViewZoom1x();
     void onOpenFile(QString);
-    void onExport(QString);
+    void onExport(void);
     void onError(QString);
     void onStateChanged(ffSequenceState);
     void onTrimChanged(long, long, void *);
     void onFrameChanged(long, void *);
 
     void onPathSelectPress(void);
+    void onPathChanged(std::string, void *);
+    void onExportFormatChanged(ffExportDetails::ExportFormat, void *);
 
     void onSidebarViewerPlaneChanged(int);
     void onSidebarExportPlaneChanged(int);
+    void onSidebarExportFormatChanged(int);
     void onSidebarSetIn(int);
     void onSidebarSetOut(int);
     void onSidebarResetIn(void);
@@ -96,6 +99,7 @@ private slots:
 private:
     QToolBox                               *m_pSBToolBox;
 
+    QPlainTextEdit                         *m_pSBEPathPlainText;
     QPushButton                            *m_pSBEPathButton;
     QComboBox                              *m_pSBEFileTypeCombo;
     QComboBox                              *m_pSBEPlaneCombo;
@@ -131,7 +135,7 @@ private:
     QFuture<void>                           m_workerThread;
 
     void openFile(void);
-    void exportFile(void);
+    void setExportFilePath(void);
     void createObjects(void);
     void initObjects(void);
     void initSidebar(void);

@@ -75,6 +75,8 @@ signals:
     // setFunction() Events
     void signal_exportTrimChanged(long, long, void*);
     void signal_exportPlaneChanged(ffExportDetails::ExportPlane, void *);
+    void signal_exportPathChanged(std::string, void *);
+    void signal_exportFormatChanged(ffExportDetails::ExportFormat, void *);
     void signal_frameChanged(long, void *);
 
 private:
@@ -87,6 +89,8 @@ private:
 //    void onJustErrored(void);
     void onExportTrimChanged(long, long, void *);
     void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
+    void onExportPathChanged(std::string, void *);
+    void onExportFormatChanged(ffExportDetails::ExportFormat, void *);
     void onFrameChanged(long, void *);
 
 public:
@@ -119,7 +123,7 @@ public:
 
     ffSequenceState getState(void);
     void openSequence(char *);
-    void saveSequence(char *);
+    void saveSequence(void);
     void closeSequence(void);
     QffSequence * getQffSequence(void);
 

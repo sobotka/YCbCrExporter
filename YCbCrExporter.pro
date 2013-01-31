@@ -1,14 +1,8 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2012-11-23T09:42:32
-#
-#-------------------------------------------------
-
 QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = YCbCrLab
+TARGET = ycbcrexporter
 TEMPLATE = app
 
 
@@ -36,4 +30,5 @@ RESOURCES +=
 OTHER_FILES += \
     TODO.txt \
     LICENSE.txt \
-    CMakeLists.txt
+    CMakeLists.txt \
+    README.mediawiki

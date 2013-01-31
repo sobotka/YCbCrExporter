@@ -1,5 +1,5 @@
 /*******************************************************************************
-YCbCr Lab
+YCbCr Exporter
 A tool to aid filmmakers / artists to manipulate YCbCr files to
 maximize quality.
 Copyright (C) 2013 Troy James Sobotka, troy.sobotka@gmail.com
@@ -457,6 +457,18 @@ void ffSequence::exportFiles(void)
 
         int length = ss.str().length();
 
+        // Create the image buffer.
+        std::vector<unsigned char>
+                imgBuffer(m_pExportDetails->getExportSize().m_width *
+                          m_pExportDetails->getExportSize().m_height * 3);
+
+        int width = m_pExportDetails->getExportSize().m_width;
+        int height = m_pExportDetails->getExportSize().m_height;
+
+        unsigned char *pY = getRawFrame(getCurrentFrame())->m_pY;
+        unsigned char *pCb = getRawFrame(getCurrentFrame())->m_pCb;
+        unsigned char *pCr = getRawFrame(getCurrentFrame())->m_pCr;
+
         for (int i = m_pExportDetails->getTrim().m_in;
              i <= m_pExportDetails->getTrim().m_out; i++)
         {
@@ -480,36 +492,47 @@ void ffSequence::exportFiles(void)
                 break;
             }
 
-            std::cout << pathBuffer.str() << std::endl;
+//            std::cout << pathBuffer.str() << std::endl;
             ImageOutput *imageOutput = ImageOutput::create(pathBuffer.str());
             if (imageOutput == NULL)
                 throw ffExportError("imageOutput == NULL",
                                     ffError::ERROR_BAD_FILENAME);
-            ImageSpec imageSpec(m_lumaSize.m_width, m_lumaSize.m_height,
-                                1, TypeDesc::UINT8);
+            ImageSpec imageSpec(m_pExportDetails->getExportSize().m_width,
+                                m_pExportDetails->getExportSize().m_height,
+                                3, TypeDesc::UINT8);
             imageOutput->open(pathBuffer.str(), imageSpec);
 
-            imageOutput->write_image(TypeDesc::UINT8,
-                                     getRawFrame(getCurrentFrame())->m_pY);
+            std::fill(imgBuffer.begin(), imgBuffer.end(), 0);
+
+            // Fill the buffer with our Y' in the RGB Green slot.
+            for (int vertical = 0; vertical < height; vertical++)
+            {
+                for (int horiz = 0; horiz < width; horiz++)
+                {
+                    imgBuffer[(vertical * width * 3) + (horiz * 3) + 1] =
+                            pY[(vertical * width) + horiz];
+                }
+            }
+            // Fill the buffer with our Cb' and Cr'.
+            for (int vertical = 0; vertical < m_chromaSize.m_height; vertical++)
+            {
+                for (int horiz = 0; horiz < m_chromaSize.m_width; horiz++)
+                {
+                    // Put Cr in the RGB Red slot.
+                    imgBuffer[(vertical * width * 3) + (horiz * 3) + 0] =
+                            pCr[(vertical * m_chromaSize.m_width) + horiz];
+                    // Put Cb in the RGB Blue slot.
+                    imgBuffer[(vertical * width * 3) + (horiz * 3) + 2] =
+                            pCb[(vertical * m_chromaSize.m_width) + horiz];
+                }
+            }
+            imageOutput->write_image(TypeDesc::UINT8, &imgBuffer[0]);
             imageOutput->close();
             delete imageOutput;
         }
-//        ImageOutput *imageOutput = ImageOutput::create (fileName);
-//        if (imageOutput == NULL)
-//            throw ffExportError("imageOutput == NULL",
-//                                ffError::ERROR_BAD_FILENAME);
-//        ImageSpec imageSpec(m_lumaSize.m_width, m_lumaSize.m_height,
-//                            1, TypeDesc::UINT8);
-
-//        imageOutput->open(fileName, imageSpec);
-//        imageOutput->write_image(TypeDesc::UINT8,
-//                                 getRawFrame(getCurrentFrame())->m_pY);
-//        imageOutput->close();
-//        delete imageOutput;
     }
     catch (ffExportError eff)
     {
-//        onJustErrored();
         throw;
     }
 }

@@ -1,4 +1,4 @@
-= YCbCr Lab =
+= YCbCr Exporter =
 
 == User Interface ==
 It is hoped that the user interface is as discoverable as possible for artists. The following is a list of existing hotkeys:
@@ -8,33 +8,26 @@ It is hoped that the user interface is as discoverable as possible for artists. 
 : i:	Set export trim in to current frame
 : o:	Set export trim out to current frame
 
-== Intended Audience ==
+Select between JPG or TIFF for lossy or lossless bitwise output respectively.
+
+Select "Export" from the file menu.
+
+== Current Limitations ==
+It is assumed an experienced artist is aware of their actions, and zero checking is provided for existing file names. Be aware of your path and file names.
+
+== Who? ==
 Filmmakers and artists interested in extracting the highest possible quality from their Y'Cb'Cr' based footage.
 
-== Goals ==
-To create a GUI application that can deal with raw bitwise exact manipulations of Y'Cb'Cr' based footage.
+== What? ==
+YCbCr Exporter exports raw Y', Cb' and Cr' from 4:2:0 files. This means that an artist can dump the raw format from their motion picture files using a basic GUI for scrubbing and selecting ranges of frames.
 
-After manipulating the raw Y'Cb'Cr' sources to an artist's liking, the application will permit export to industrial grade formats such as EXR and DPX for mastering / finishing.
+== Why? ==
+In processing YCbCr footage, many hidden transformations are applied to your footage. This application will create raw, bitwise exact output in a still image. This image can then be loaded into compositors or image manipulation applications to control the generation of RGB images.
 
-== Techniques ==
-Leverage several useful techniques to improve the quality of the Y'Cb'Cr' based footage.
+This would greatly impact grading in a post production environment.
 
-* Improved scaling of Cb' Cr' planes. In most instances, scaling of the Cb' and Cr' based planes is sub-optimal in quality due to the traditional need of playback-only viewing. This approach will leverage a best-in-breed approach known as cubic b spline with prefilter for optimal perceptual sharpness.
-* Linearization of footage sources. Sources in Y'Cb'Cr based footage is stored in non-linear color space models. Linearizing the footage provides reduces many optical errors in footage.
-* Improved color transformations. Precise control over color transformations is planned to provide greatest artist flexibility.
-* Out of gamut clipped values retained via use of floating point output and wide color space models.
-* Chroma reconstruction based on spill / binning techniques. Chroma scaling is destructive, but with some processing, some of the chroma can be reconstructed based on resultant out of gamut values.
+== How? ==
+To harness the output from this application, the raw YCbCr image should be loaded into a suitable application. Note that many image manipulation applications will assume transfer curves on the image data, so this should be loaded as raw data. Once loaded, an artist can take the raw YCbCr, scale the Cb and Cr channels manually using the scaling algorithm of their choice, and recombine for a high quality image.
 
-== Current State ==
-* Load bitwise exact raw Y'Cb'Cr' planes from 4:2:0 sources, unscaled.
-* Saves the first Y' plane in the series.
-
-== Near Targets ==
-* Export all frames to artist defined formats, unscaled.
-* Introduce first Y'Cb'Cr' merging to R'G'B' via nearest neighbor scaling of Cb' and Cr'.
-
-== Far Targets ==
-* Export ranges set on defined in and out points.
-* Complete scaling algorithm selection to include nearest neighbor, linear, cubic b, and cubic b with prefilter.
-* Integrate OpenColorIO for linearization and other color based transforms.
-* Add formats that are within the design scope such as support for 4:2:2 out of the Black Magic Camera.
+== When? ==
+Typically, this would be useful once a final cut has been locked in and the sources can be selected and processed with certainty.

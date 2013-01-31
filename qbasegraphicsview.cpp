@@ -1,5 +1,5 @@
 /*******************************************************************************
-YCbCr Lab
+YCbCr Exporter
 A tool to aid filmmakers / artists to manipulate YCbCr files to
 maximize quality.
 Copyright (C) 2013 Troy James Sobotka, troy.sobotka@gmail.com

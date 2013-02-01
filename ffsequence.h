@@ -37,6 +37,9 @@ extern "C"
 #include <vector>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
+#include <stdexcept>
+#include <math.h>
 
 #include "OpenImageIO/imageio.h"
 OIIO_NAMESPACE_USING

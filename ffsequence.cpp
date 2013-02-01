@@ -19,8 +19,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *******************************************************************************/
 
 #include "ffsequence.h"
-#include <stdexcept>
-#include <math.h>
 
 /******************************************************************************
  * ffTrim
@@ -349,9 +347,25 @@ void ffSequence::readFile(char *fileName)
             throw ffImportError("m_stream < 0", ffError::ERROR_NO_VIDEO_STREAM);
 
         m_pCodecCtx = m_pFormatCtx->streams[m_stream]->codec;
-        if (m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P)
+
+        // Debugging purposes to drop pixel format and bit depth.
+        // See libavcodec/imgconvert.c for bit depths of actual YCbCr.
+//        std::vector<char> buffer(100);
+//        std::cout << av_get_pix_fmt_string(&buffer[0], 100, m_pCodecCtx->pix_fmt)
+//                  << std::endl;
+
+        switch (m_pCodecCtx->pix_fmt)
+        {
+        // DSLR Cameras
+        case (PIX_FMT_YUVJ420P):
+        // XDCAM EX
+        case (PIX_FMT_YUV420P):
+            break;
+        default:
             throw ffImportError("m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P",
                           ffError::ERROR_BAD_FORMAT);
+        }
+
 
         m_lumaSize = ffSize(m_pCodecCtx->width, m_pCodecCtx->height);
         // While we could simply assume that all 4:2:0 content is half width

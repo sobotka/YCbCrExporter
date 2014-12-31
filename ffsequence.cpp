@@ -160,8 +160,10 @@ ffRawFrame::ffRawFrame(AVFrame* pFrame) :
 {
     int y_width         = pFrame->width;
     int y_height        = pFrame->height;
-    int c_hshift        = av_pix_fmt_descriptors[pFrame->format].log2_chroma_h;
-    int c_wshift        = av_pix_fmt_descriptors[pFrame->format].log2_chroma_w;
+//    int c_hshift        = av_pix_fmt_descriptors[pFrame->format].log2_chroma_h;
+//    int c_wshift        = av_pix_fmt_descriptors[pFrame->format].log2_chroma_w;
+    int c_hshift = 0, c_wshift = 0;
+    av_pix_fmt_get_chroma_sub_sample(AVPixelFormat(pFrame->format), &c_hshift, &c_wshift);
 
     // Instead of making assumptions, and likely keeping this code more
     // flexibile, we do the correct approach according to FFMPEG and bit shift
@@ -350,9 +352,9 @@ void ffSequence::readFile(char *fileName)
 
         // Debugging purposes to drop pixel format and bit depth.
         // See libavcodec/imgconvert.c for bit depths of actual YCbCr.
-//        std::vector<char> buffer(100);
-//        std::cout << av_get_pix_fmt_string(&buffer[0], 100, m_pCodecCtx->pix_fmt)
-//                  << std::endl;
+        std::vector<char> buffer(100);
+        std::cout << av_get_pix_fmt_string(&buffer[0], 100, m_pCodecCtx->pix_fmt)
+                  << std::endl;
 
         switch (m_pCodecCtx->pix_fmt)
         {
@@ -360,6 +362,8 @@ void ffSequence::readFile(char *fileName)
         case (PIX_FMT_YUVJ420P):
         // XDCAM EX
         case (PIX_FMT_YUV420P):
+        case (PIX_FMT_YUV422P):
+            // C300
             break;
         default:
             throw ffImportError("m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P",
@@ -374,11 +378,15 @@ void ffSequence::readFile(char *fileName)
         // correctly bitshift according to the chroma shift values.
         m_chromaSize = ffSize(
                     m_lumaSize.m_width >>
-                    av_pix_fmt_descriptors[m_pCodecCtx->pix_fmt].log2_chroma_w,
+                    av_pix_fmt_desc_get(m_pCodecCtx->pix_fmt)->log2_chroma_w,
                     m_lumaSize.m_height >>
-                    av_pix_fmt_descriptors[m_pCodecCtx->pix_fmt].log2_chroma_h);
+                    av_pix_fmt_desc_get(m_pCodecCtx->pix_fmt)->log2_chroma_h);
 
-        m_totalFrames = m_pFormatCtx->streams[m_stream]->nb_frames;
+//        m_totalFrames = m_pFormatCtx->streams[m_stream]->nb_frames;
+        m_totalFrames = m_pFormatCtx->duration *
+                av_q2d(m_pFormatCtx->streams[m_stream]->r_frame_rate) /
+                AV_TIME_BASE;
+        std::cout << "Calculated frames: " << m_totalFrames << std::endl;
 
         m_pCodec = avcodec_find_decoder(m_pCodecCtx->codec_id);
         if (m_pCodec == NULL)
@@ -390,9 +398,9 @@ void ffSequence::readFile(char *fileName)
 
         m_frames.reserve(m_totalFrames);
 
-        AVFrame *pTempFrame = avcodec_alloc_frame();
+        AVFrame *pTempFrame = av_frame_alloc();
         if (pTempFrame == NULL)
-            throw ffImportError("avcodec_alloc_frame() == NULL",
+            throw ffImportError("av_frame_alloc() == NULL",
                           ffError::ERROR_ALLOC_ERROR);
 
         ffAVPacket    tempPacket;

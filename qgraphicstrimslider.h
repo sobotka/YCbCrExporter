@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef QGRAPHICSTRIMSLIDER_H
 #define QGRAPHICSTRIMSLIDER_H
 
-#include <QtGui>
+#include <QtWidgets>
 #include "ffsequence.h"
 
 class QGraphicsTrimSlider : public QGraphicsWidget

@@ -21,7 +21,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef TEXTPILL_H
 #define TEXTPILL_H
 
-#include <QtGui>
+#include <QGraphicsWidget>
+#include <QGraphicsOpacityEffect>
+#include <QFontMetricsF>
+#include <QPropertyAnimation>
+
 
 #define DEFAULT_TEXTCOLOR               QColor(220,220,220)
 #define DEFAULT_FILLCOLOR               QColor(40,40,40)

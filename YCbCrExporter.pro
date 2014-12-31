@@ -21,7 +21,7 @@ HEADERS  += mainwindow.h \
     qgraphicstrimslider.h \
     ycbcrlabview.h
 
-unix|win32: LIBS += -lavformat
+unix|win32: LIBS += -L/usr/local/lib/ -lavcodec -lavutil -lavdevice -lavformat
 
 unix:!symbian|win32: LIBS += -lOpenImageIO
 
@@ -32,3 +32,5 @@ OTHER_FILES += \
     LICENSE.txt \
     CMakeLists.txt \
     README.mediawiki
+
+QMAKE_CXXFLAGS += -D__STDC_CONSTANT_MACROS

@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef QBASEGRAPHICSVIEW_H
 #define QBASEGRAPHICSVIEW_H
 
-#include <QtGui>
+#include <QtWidgets>
 
 class QBaseGraphicsView : public QGraphicsView
 {

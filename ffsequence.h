@@ -22,15 +22,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define FFSEQUENCE_H
 
 #define AV_LOG_VERBOSE
-// Needed by FFMPEG to avoid "error: ‘UINT64_C’ was not declared in this scope"
-#define                           __STDC_CONSTANT_MACROS
+
 extern "C"
 {
-#include <libavcodec/avcodec.h>
-#include <libavformat/avformat.h>
-#include <libavutil/pixdesc.h>
-#include <libavutil/pixfmt.h>
-#include <libswscale/swscale.h>
+#include "libavcodec/avcodec.h"
+#include "libavformat/avformat.h"
+#include "libavutil/pixdesc.h"
+#include "libavutil/avutil.h"
+#include "libavutil/pixfmt.h"
+#include "libswscale/swscale.h"
+#include "libavutil/intreadwrite.h"
 }
 
 #include <stdexcept>
@@ -38,7 +39,6 @@ extern "C"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-#include <stdexcept>
 #include <math.h>
 
 #include "OpenImageIO/imageio.h"

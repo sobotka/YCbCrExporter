@@ -143,6 +143,7 @@ void YCbCrLabView::createActions()
 
 void YCbCrLabView::initObjects(void)
 {
+    m_numScheduledScalings = 0;
     m_pGraphicsView->setScene(m_pGraphicsScene);
     m_pGraphicsView->setTransformationAnchor(QGraphicsView::AnchorUnderMouse);
     m_pGraphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
@@ -324,8 +325,8 @@ void YCbCrLabView::openSequence(char *fileName)
     }
     catch (ffmpegError eff)
     {
-        char errorC[AV_ERROR_MAX_STRING_SIZE];
-        av_strerror(eff.getError(), errorC, AV_ERROR_MAX_STRING_SIZE);
+        char errorC[1000];
+        av_strerror(eff.getError(), errorC, 1000);
 
         QString message = tr("There was an error attempting to open the "
                              "file. <<FFMPEG: ") + QString(eff.what()) +

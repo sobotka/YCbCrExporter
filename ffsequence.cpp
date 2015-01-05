@@ -363,7 +363,7 @@ void ffSequence::readFile(char *fileName)
         // XDCAM EX
         case (PIX_FMT_YUV420P):
         case (PIX_FMT_YUV422P):
-            // C300
+        // Canon C300
             break;
         default:
             throw ffImportError("m_pCodecCtx->pix_fmt != PIX_FMT_YUVJ420P",
@@ -382,11 +382,15 @@ void ffSequence::readFile(char *fileName)
                     m_lumaSize.m_height >>
                     av_pix_fmt_desc_get(m_pCodecCtx->pix_fmt)->log2_chroma_h);
 
-//        m_totalFrames = m_pFormatCtx->streams[m_stream]->nb_frames;
+        m_bitsPerPixel = av_get_bits_per_pixel(
+                    av_pix_fmt_desc_get (m_pCodecCtx->pix_fmt));
+        // Calculate total frames, as streams[n]-nb_frames isn't set for
+        // many codecs.
         m_totalFrames = m_pFormatCtx->duration *
                 av_q2d(m_pFormatCtx->streams[m_stream]->r_frame_rate) /
                 AV_TIME_BASE;
-        std::cout << "Calculated frames: " << m_totalFrames << std::endl;
+        std::cout << "Calculated frames: " << m_totalFrames <<
+                     ", Bits per Pixel: " << m_bitsPerPixel << std::endl;
 
         m_pCodec = avcodec_find_decoder(m_pCodecCtx->codec_id);
         if (m_pCodec == NULL)

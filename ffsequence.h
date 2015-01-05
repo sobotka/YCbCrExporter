@@ -312,6 +312,7 @@ private:
     long                                    m_currentFrame;
     ffSize                                  m_lumaSize;
     ffSize                                  m_chromaSize;
+    int                                     m_bitsPerPixel;
 
     int                                     m_stream;
     static bool                             m_isInitialized;

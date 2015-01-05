@@ -139,6 +139,8 @@ void YCbCrLabView::createActions()
 {
     m_pShortcutTrimIn = new QShortcut(tr("i"), this);
     m_pShortcutTrimOut = new QShortcut(tr("o"), this);
+    //m_pShortcutSingleFrameAhead = new QShortcut(Qt::Key_Left, );
+    //m_pShortcutSingleFrameBack = new QShortcut(Qt::Key_Right, );
 }
 
 void YCbCrLabView::initObjects(void)

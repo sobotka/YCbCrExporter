@@ -161,6 +161,9 @@ public slots:
 
     void onExportPlaneChanged(ffExportDetails::ExportPlane, void *);
 
+    void onFrameForward(void);
+    void onFrameBack(void);
+
 private:
     QGraphicsAnchorLayout                  *m_pGraphicsAnchorLayout;
     QBaseGraphicsView                      *m_pGraphicsView;
@@ -196,6 +199,8 @@ private:
 
     QShortcut                              *m_pShortcutTrimIn;
     QShortcut                              *m_pShortcutTrimOut;
+    QShortcut                              *m_pShortcutSingleFrameAhead;
+    QShortcut                              *m_pShortcutSingleFrameBack;
 
     int                                     m_numScheduledScalings;
     int                                     m_targetProgress;

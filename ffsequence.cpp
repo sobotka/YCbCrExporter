@@ -580,7 +580,7 @@ ffRawFrame* ffSequence::setCurrentFrame(long frame, void *sender)
 {
     if (((frame - 1) != m_currentFrame) &&
         ((frame - 1) > ffDefault::NoFrame) &&
-        ((frame - 1) <= getTotalFrames()))
+        ((frame - 1) < getTotalFrames()))
     {
         m_currentFrame = (frame - 1);
         onFrameChanged(getCurrentFrame(), sender);

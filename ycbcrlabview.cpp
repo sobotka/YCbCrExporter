@@ -139,8 +139,8 @@ void YCbCrLabView::createActions()
 {
     m_pShortcutTrimIn = new QShortcut(tr("i"), this);
     m_pShortcutTrimOut = new QShortcut(tr("o"), this);
-    //m_pShortcutSingleFrameAhead = new QShortcut(Qt::Key_Left, );
-    //m_pShortcutSingleFrameBack = new QShortcut(Qt::Key_Right, );
+    m_pShortcutSingleFrameAhead = new QShortcut(Qt::Key_Right, this);
+    m_pShortcutSingleFrameBack = new QShortcut(Qt::Key_Left, this);
 }
 
 void YCbCrLabView::initObjects(void)
@@ -207,6 +207,10 @@ void YCbCrLabView::initObjects(void)
             SLOT(onExportTrimInPressed()));
     connect(m_pShortcutTrimOut, SIGNAL(activated()), this,
             SLOT(onExportTrimOutPressed()));
+    connect(m_pShortcutSingleFrameAhead, SIGNAL(activated()), this,
+            SLOT(onFrameForward()));
+    connect(m_pShortcutSingleFrameBack, SIGNAL(activated()), this,
+            SLOT(onFrameBack()));
     connect(m_pffSequence, SIGNAL(
                 signal_exportPlaneChanged(
                     ffExportDetails::ExportPlane,void*)), this,
@@ -383,6 +387,26 @@ QGraphicsPixmapItem* YCbCrLabView::getGraphicsPixmapItem(void)
 QTextPill* YCbCrLabView::getTextPillItem(void)
 {
     return m_pTextPill;
+}
+
+void YCbCrLabView::onFrameForward()
+{
+    std::cout << "onFrameForward() before Current Frame: " << getCurrentFrame() << std::endl;
+//    setCurrentFrame(getCurrentFrame() + 1, this);
+//    emit onFrameChanged(getCurrentFrame(), this);
+    m_pSlider->setValue(getCurrentFrame() + 1);
+    std::cout << "onFrameForward() after Current Frame: " << getCurrentFrame() << std::endl;
+
+}
+
+void YCbCrLabView::onFrameBack()
+{
+    std::cout << "onFrameBack() before Current Frame: " << getCurrentFrame() << std::endl;
+//    setCurrentFrame(getCurrentFrame() - 1, this);
+//    emit onFrameChanged(getCurrentFrame(), this);
+    m_pSlider->setValue(getCurrentFrame() - 1);
+    std::cout << "onFrameBack() after Current Frame: " << getCurrentFrame() << std::endl;
+
 }
 
 /******************************************************************************

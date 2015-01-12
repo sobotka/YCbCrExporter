@@ -391,22 +391,12 @@ QTextPill* YCbCrLabView::getTextPillItem(void)
 
 void YCbCrLabView::onFrameForward()
 {
-    std::cout << "onFrameForward() before Current Frame: " << getCurrentFrame() << std::endl;
-//    setCurrentFrame(getCurrentFrame() + 1, this);
-//    emit onFrameChanged(getCurrentFrame(), this);
     m_pSlider->setValue(getCurrentFrame() + 1);
-    std::cout << "onFrameForward() after Current Frame: " << getCurrentFrame() << std::endl;
-
 }
 
 void YCbCrLabView::onFrameBack()
 {
-    std::cout << "onFrameBack() before Current Frame: " << getCurrentFrame() << std::endl;
-//    setCurrentFrame(getCurrentFrame() - 1, this);
-//    emit onFrameChanged(getCurrentFrame(), this);
     m_pSlider->setValue(getCurrentFrame() - 1);
-    std::cout << "onFrameBack() after Current Frame: " << getCurrentFrame() << std::endl;
-
 }
 
 /******************************************************************************
@@ -484,6 +474,10 @@ void YCbCrLabView::onProgressAnimation(qreal)
 
         m_pProgressBar->setValue(m_pProgressBar->value() + step);
         m_pProgressBar->update();
+    }
+    else
+    {
+        m_pProgressTimeline->stop();
     }
 }
 

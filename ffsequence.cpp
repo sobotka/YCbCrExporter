@@ -479,6 +479,14 @@ void ffSequence::exportFiles(void)
         std::stringstream ss;
         std::stringstream pathBuffer;
 
+        unsigned char *pY = NULL;
+        unsigned char *pCb = NULL;
+        unsigned char *pCr = NULL;
+
+        double totalExportedFrames = m_pExportDetails->getTrim().m_out -
+                m_pExportDetails->getTrim().m_in;;
+        double currentExportedFrames = 0;
+
         ss << m_pExportDetails->getTrim().m_out;
 
         int length = ss.str().length();
@@ -491,13 +499,14 @@ void ffSequence::exportFiles(void)
         int width = m_pExportDetails->getExportSize().m_width;
         int height = m_pExportDetails->getExportSize().m_height;
 
-        unsigned char *pY = getRawFrame(getCurrentFrame())->m_pY;
-        unsigned char *pCb = getRawFrame(getCurrentFrame())->m_pCb;
-        unsigned char *pCr = getRawFrame(getCurrentFrame())->m_pCr;
+        onProgressStart();
 
         for (int i = m_pExportDetails->getTrim().m_in;
              i <= m_pExportDetails->getTrim().m_out; i++)
         {
+            currentExportedFrames = m_pExportDetails->getTrim().m_out - i;
+            onProgress(1.0 - (currentExportedFrames / totalExportedFrames));
+
             ss.str("");
             pathBuffer.str("");
 
@@ -530,6 +539,10 @@ void ffSequence::exportFiles(void)
 
             std::fill(imgBuffer.begin(), imgBuffer.end(), 0);
 
+            pY = getRawFrame(i)->m_pY;
+            pCb = getRawFrame(i)->m_pCb;
+            pCr = getRawFrame(i)->m_pCr;
+
             // Fill the buffer with our Y' in the RGB Green slot.
             for (int vertical = 0; vertical < height; vertical++)
             {
@@ -561,6 +574,7 @@ void ffSequence::exportFiles(void)
     {
         throw;
     }
+    onProgressEnd();
 }
 
 void ffSequence::closeFile(void)

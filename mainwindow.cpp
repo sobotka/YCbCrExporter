@@ -111,6 +111,15 @@ void MainWindow::openFile(void)
     }
 }
 
+void MainWindow::exportFile(void)
+{
+    if (!m_workerThread.isRunning())
+    {
+        m_workerThread = QtConcurrent::run(this,
+                                           &MainWindow::onExportFile);
+    }
+}
+
 void MainWindow::setExportFilePath(void)
 {
     QFileDialog::Options    options;
@@ -390,7 +399,7 @@ void MainWindow::onMenuFileExport()
 {
     try
     {
-        onExport();
+        exportFile();
     }
     catch (ffExportError eff)
     {
@@ -439,7 +448,7 @@ void MainWindow::onOpenFile(QString fileName)
     }
 }
 
-void MainWindow::onExport(void)
+void MainWindow::onExportFile(void)
 {
     try
     {
